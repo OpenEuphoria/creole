@@ -45,10 +45,11 @@ end ifdef
 end function
 
 -----------------------------------------------------------------
-function make_filename(sequence pBaseName)
+function make_filename(sequence pBaseName, object pLinkDir = 0)
 -----------------------------------------------------------------
 	sequence lOutFile
 	sequence lFileParts
+	sequence lLinkDir
 	
 	if length(pBaseName) = 0 then
 		return ""
@@ -57,12 +58,18 @@ function make_filename(sequence pBaseName)
 	lOutFile = ""
 	lFileParts = pathinfo(pBaseName)
 
-	if length(vOutDir) = 0 then
+	if sequence(pLinkDir) then
+		lLinkDir = pLinkDir
+	else
+		lLinkDir = vOutDir
+	end if
+	
+	if length(lLinkDir) = 0 then
 		if length(lFileParts[PATH_DIR]) > 0 then
 			lOutFile &= lFileParts[PATH_DIR] & SLASH
 		end if
 	else
-		lOutFile = vOutDir & SLASH
+		lOutFile = lLinkDir & SLASH
 	end if
 	lOutFile &= pBaseName
 	lOutFile &= ".html"
@@ -269,20 +276,20 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				kan:setValue(lData, "context", lThisContext)
 				kan:setValue(lData, "thistext", lThisText)
 				kan:setValue(lData, "body", pParms[1])
-				kan:setValue(lData, "previous", make_filename(lPrevPageFile[1]))
-				kan:setValue(lData, "next", make_filename(lNextPageFile[1]))
-				kan:setValue(lData, "prevchap", make_filename(lPrevChapFile[1]))
-				kan:setValue(lData, "nextchap", make_filename(lNextChapFile[1]))
-				kan:setValue(lData, "currchap", make_filename(lCurrChapFile[1]))
-				kan:setValue(lData, "parent", make_filename(lParentFile[1]))
+				kan:setValue(lData, "previous", make_filename(lPrevPageFile[1],""))
+				kan:setValue(lData, "next", make_filename(lNextPageFile[1],""))
+				kan:setValue(lData, "prevchap", make_filename(lPrevChapFile[1],""))
+				kan:setValue(lData, "nextchap", make_filename(lNextChapFile[1],""))
+				kan:setValue(lData, "currchap", make_filename(lCurrChapFile[1],""))
+				kan:setValue(lData, "parent", make_filename(lParentFile[1],""))
 				kan:setValue(lData, "pptext", lPrevPageFile[2])
 				kan:setValue(lData, "nptext", lNextPageFile[2])
 				kan:setValue(lData, "pctext", lPrevChapFile[2])
 				kan:setValue(lData, "nctext", lNextChapFile[2])
 				kan:setValue(lData, "chaptext", lCurrChapFile[2])
 				kan:setValue(lData, "partext", lParentFile[2])
-				kan:setValue(lData, "home", make_filename(lHomeFile))
-				kan:setValue(lData, "toc", make_filename(lTOCFile))
+				kan:setValue(lData, "home", make_filename(lHomeFile,""))
+				kan:setValue(lData, "toc", make_filename(lTOCFile,""))
 				kan:setValue(lData, "publishedon", vPublishedDate)
 				lHeadings = kan:loadTemplateFromFile(vTemplateFile)
 				if atom(lHeadings) then
@@ -350,7 +357,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 							lHTMLText &= lSpacer
 						end for
 					end if
-					lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5]) & 
+					lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5],"") & 
 								"#" & lHeadings[i][3] & "\">" &
 								lHeadings[i][2] & "</a></div>\n"
 				end for
@@ -367,7 +374,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				lIdx = lPos - 1
 				while lIdx >= 1 do
 					if lHeadings[lIdx][1] = lHere[1] then
-						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5]) & 
+						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
 								"#" & lHeadings[lIdx][3] & "\">" &
 								"Previous" & "</a>"
 						exit
@@ -376,7 +383,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				end while
 				lHTMLText &= " "
 				
-				lHTMLText &= "<a href=\"" & make_filename(lHeadings[1][5]) & 
+				lHTMLText &= "<a href=\"" & make_filename(lHeadings[1][5],"") & 
 						"#" & lHeadings[1][3] & "\">" &
 						"Up" & "</a>"
 				lHTMLText &= " "
@@ -384,7 +391,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				lIdx = lPos + 1
 				while lIdx <= length(lHeadings) do
 					if lHeadings[lIdx][1] = lHere[1] then
-						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5]) & 
+						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
 								"#" & lHeadings[lIdx][3] & "\">" &
 								"Next" & "</a>"
 						exit
@@ -420,7 +427,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 					end if
 					if lHeadings[lIdx][1] > lHere[1] then
 						lHTMLText &= "<div class=\"toc_" & sprint(lHeadings[lIdx][1]) & "\">"
-						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5]) & 
+						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
 									"#" & lHeadings[lIdx][3] & "\">" &
 									lHeadings[lIdx][2] & "</a></div>\n"
 					end if
@@ -625,7 +632,7 @@ procedure Generate(sequence pFileName)
 	puts(fh, "<body>\n" )
 	for i = 1 to length(lBookMarks) do
 		puts(fh, "<a href=\"")
-		puts(fh, make_filename(lBookMarks[i][6])) -- Containing file
+		puts(fh, make_filename(lBookMarks[i][6],"")) -- Containing file
 		puts(fh, "#")
 		puts(fh, lBookMarks[i][4]) -- Bookmark name
 		puts(fh, "\">")
