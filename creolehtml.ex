@@ -33,6 +33,7 @@ KnownWikis  = {}
 KnownWikis &= {{"WIKICREOLE",	"http://wikicreole.org/wiki/"}}
 KnownWikis &= {{"OHANA",		"http://wikiohana.net/cgi-bin/wiki.pl/"}}
 KnownWikis &= {{"WIKIPEDIA",	"http://wikipedia.org/"}}
+KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/euwiki.cgi?"}}
 
 -----------------------------------------------------------------
 function fixup_seps(sequence pFileName)
@@ -597,6 +598,8 @@ procedure Generate(sequence pFileName)
 	end if	
 	
 	vCurrentContext = pFileName
+	object VOID = creole_parse(Set_Option, CO_Verbose)
+
 	lOutText = creole_parse(lContent, routine_id("generate_html"), vCurrentContext)
 	if length(lOutText) > 0 then
 		if atom(lOutText[1]) then

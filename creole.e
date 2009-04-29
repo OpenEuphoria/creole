@@ -88,6 +88,7 @@ global enum     -- Action Codes for the Creole
 	CO_SplitLevel,      -- Set the heading level at which to split into separate files.
 	CO_SplitName,       -- Set the file prefix for the split files.
 	CO_AllowMacros,     -- Set the flag to allow/disallow macros.
+	CO_Verbose,         -- Set the verbose flag
 	MU_Bold,			-- Allow/Disallow bold markup
 	MU_Italic,			-- Allow/Disallow italic markup
 	MU_Monospace,		-- Allow/Disallow monospace markup
@@ -147,6 +148,7 @@ sequence vHeadingNums = {}
 sequence vCurrentContext = ""
 sequence vRawContext = ""
 sequence vStyle = {"default"}
+integer  vVerbose = 0
 
 object   re_URL = re:new(#/\W(\w+)\.(\w+)\.(\w+)\W/)
 
@@ -1949,7 +1951,9 @@ function get_nowiki(sequence pRawText, atom pFrom)
 	if lType = 0 then
 		lText = Generate_Final(NoWikiBlock, {Generate_Final(Sanitize,pRawText[lStartPos .. lEndPos - 1])})
 	else
-		lText = Generate_Final(NoWikiInline, {Generate_Final(Sanitize,trim(pRawText[lStartPos .. lEndPos - 1]))})
+		lText = trim(pRawText[lStartPos .. lEndPos - 1])
+		lText = Generate_Final(Sanitize, lText)
+		lText = Generate_Final(NoWikiInline, {lText})
 	end if
 
 
@@ -3498,6 +3502,9 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 						end if
 						break
 
+				case CO_Verbose then
+						vVerbose = 1
+						
 				case else
 					break
 
@@ -3548,6 +3555,9 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			lFrom = lPos + 1
 		end while
 
+		if vVerbose then
+			puts(1, "Processing macros.\n")
+		end if
 		lText = process_macros( pRawText, "" )
 
 		if length(lText) > 0 then
@@ -3556,12 +3566,21 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 				lText &= '\n'
 			end if
 		end if
+		
+		if vVerbose then
+			printf(1, "Processing text (%d bytes).\n", length(lText))
+		end if
 		lText = parse_text( lText )
 
 		-- Resolve any local links.
-
+		if vVerbose then
+			puts(1, "Processing local links.\n")
+		end if
 		lFrom = 1
 		for i = 1 to length(vUnresolved) do
+			if vVerbose then
+				printf(1, "Local Link #%5d of %5d (%s)\n", {i,length(vUnresolved),vUnresolved[i][1]})
+			end if
 			lIdx = find_bookmark(vUnresolved[i][1], vUnresolved[i][2], vUnresolved[i][3], vUnresolved[i][4])
 			if lIdx = 0 then
 				lPluginResult = Generate_Final(InternalLink,{"unresolved", vUnresolved[i][2]})
@@ -3578,11 +3597,16 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 		end for
 
 		-- Run any plugins now
-
+		if vVerbose then
+			puts(1, "Processing plugins.\n")
+		end if
 		lFrom = 1
 		for i = 1 to length(vPluginList) do
 			lPluginResult = Generate_Final(Plugin, vPluginList[i])
 			lPos = match_from({TAG_PLUGIN, i}, lText, lFrom)
+			if vVerbose then
+				printf(1, "Plugin #%5d of %5d\n", {i,length(vPluginList)})
+			end if
 			if lPos > 0 then
 				lText = lText[1 .. lPos - 1] & lPluginResult & lText[lPos + 2 .. $]
 				lFrom += length(lPluginResult) - 2
@@ -3590,12 +3614,18 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 		end for
 
 		if length(vSplitFile) > 0 then
+			if vVerbose then
+				puts(1, "Splitting into files.\n")
+			end if
 			lMultiText = {}
 			lFrom = 1
 			lFileNo = 1
 
 			while lPos != 0 with entry do
 				if lPos > lFrom then
+					if vVerbose then
+						printf(1, "Files #%d\n", lFileNo)
+					end if
 					lMultiText = append(lMultiText, {vSplitFile[lFileNo],
 						Generate_Final(Document,{lText[lFrom .. lPos - 1],vSplitFile[lFileNo] })})
 				end if
