@@ -1951,9 +1951,7 @@ function get_nowiki(sequence pRawText, atom pFrom)
 	if lType = 0 then
 		lText = Generate_Final(NoWikiBlock, {Generate_Final(Sanitize,pRawText[lStartPos .. lEndPos - 1])})
 	else
-		lText = trim(pRawText[lStartPos .. lEndPos - 1])
-		lText = Generate_Final(Sanitize, lText)
-		lText = Generate_Final(NoWikiInline, {lText})
+ 		lText = Generate_Final(NoWikiInline, {Generate_Final(Sanitize, trim(pRawText[lStartPos .. lEndPos - 1]))})
 	end if
 
 
@@ -3605,7 +3603,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			lPluginResult = Generate_Final(Plugin, vPluginList[i])
 			lPos = match_from({TAG_PLUGIN, i}, lText, lFrom)
 			if vVerbose then
-				printf(1, "Plugin #%5d of %5d\n", {i,length(vPluginList)})
+				printf(1, "Executing plugin #%5d of %5d\n", {i,length(vPluginList)})
 			end if
 			if lPos > 0 then
 				lText = lText[1 .. lPos - 1] & lPluginResult & lText[lPos + 2 .. $]
@@ -3624,7 +3622,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			while lPos != 0 with entry do
 				if lPos > lFrom then
 					if vVerbose then
-						printf(1, "Files #%d\n", lFileNo)
+						printf(1, "Creating file #%d\n", lFileNo)
 					end if
 					lMultiText = append(lMultiText, {vSplitFile[lFileNo],
 						Generate_Final(Document,{lText[lFrom .. lPos - 1],vSplitFile[lFileNo] })})
@@ -3634,6 +3632,9 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			  entry
 				lPos = find_from(TAG_ENDFILE, lText, lFrom)
 			end while
+			if vVerbose then
+				printf(1, "Creating file #%d\n", lFileNo)
+			end if
 			lMultiText = append(lMultiText, {vSplitFile[lFileNo],
 				Generate_Final(Document,{lText[lFrom .. $],vSplitFile[lFileNo]})})
 			return lMultiText
