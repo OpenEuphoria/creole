@@ -1672,8 +1672,10 @@ function get_eucode(sequence pRawText, atom pFrom)
 		end if
 
 		lEndPos = pFrom
-		if pRawText[lEndPos] = '\n' then
-			lEndPos += 1
+		if lEndPos <= length(pRawText) then
+			if pRawText[lEndPos] = '\n' then
+				lEndPos += 1
+			end if
 		end if
 		lStartPos = lEndPos
 
