@@ -14,7 +14,6 @@ include std/map.e
 include std/types.e
 include std/sort.e
 include std/regex.e as re
-include std/tsim.e
 
 include euphoria/syncolor.e
 
