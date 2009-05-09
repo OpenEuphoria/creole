@@ -14,6 +14,8 @@ include std/map.e
 include std/types.e
 include std/sort.e
 include std/regex.e as re
+include std/tsim.e
+
 include euphoria/syncolor.e
 
 object gDebug gDebug = 0
@@ -271,12 +273,12 @@ function cleanup( sequence pText, sequence pExtra = "")
 		end if
 	end for
 
-	return pText[1..lPos]
+	return lower(pText[1..lPos])
 end function
 
 ifdef UNITTEST then
-test_equal("cleanup 1", "abcDEFghi123", cleanup(" a(b)--c ** D !EFg `\thi 1.23$"))
-test_equal("cleanup 2", "a(b)cDEFghi123", cleanup(" a(b)--c ** D !EFg `\thi 1.23$", "()"))
+test_equal("cleanup 1", "abcdefghi123", cleanup(" a(b)--c ** D !EFg `\thi 1.23$"))
+test_equal("cleanup 2", "a(b)cdefghi123", cleanup(" a(b)--c ** D !EFg `\thi 1.23$", "()"))
 end ifdef
 
 
@@ -389,7 +391,7 @@ test_equal("find_nonspace 6a", 3, find_nonspace("abc", 3))
 test_equal("find_nonspace 7a", 3, find_nonspace(" abc", 3))
 test_equal("find_nonspace 8a", 9, find_nonspace(" \t \t \t\t abc", 3))
 end ifdef
-
+with trace
 ------------------------------------------------------------------------------
 function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContext, integer pHere)
 ------------------------------------------------------------------------------
@@ -399,90 +401,113 @@ function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContex
 	sequence lCleanStoredAlt
 	sequence lPossibles = {}
 
-	lCleanBMText = lower(cleanup(pBMText))
-	lCleanDisplayText = lower(cleanup(pDisplayText))
+	lCleanBMText = cleanup(pBMText)
+	lCleanDisplayText = cleanup(pDisplayText)
 
 	-- First, look through the bookmarks in the supplied context.
 	-- Next, look through the bookmarks out of the supplied context.
 	for x = 1 to 2 do
 		for i = 1 to length(vBookMarks) do
-			lCleanStored = lower(cleanup(vBookMarks[i][3]))
+			lCleanStored = cleanup(vBookMarks[i][3])
+			if lCleanStored[1] = '_' then
+				integer pos
+				pos = find_from('_', lCleanStored, 2)
+				if pos != 0 then
+					lCleanStored = lCleanStored[pos+1 .. $]
+				end if
+			end if
+			
 			if sequence(vBookMarks[i][2]) then
-				lCleanStoredAlt = lower(cleanup(vBookMarks[i][2]))
+				lCleanStoredAlt = cleanup(vBookMarks[i][2])
 			else
 				lCleanStoredAlt = ""
 			end if
-			if x = 1 and not equal(vBookMarks[i][4], pContext) then
-				continue
+			if x = 1 then
+				if not equal(vBookMarks[i][4], pContext) then
+					continue
+				end if
+			else -- x = 2 
+				if equal(vBookMarks[i][4], pContext) then
+					continue
+				end if
 			end if
-			if x = 2 and equal(vBookMarks[i][4], pContext) then
-				continue
-			end if
-
-			if equal(vBookMarks[i][3], pBMText) then
+			if equal(pBMText, vBookMarks[i][3]) then
 				return i
 			end if
 
-			if equal( vBookMarks[i][3], pDisplayText) then
+			if equal(pDisplayText, vBookMarks[i][3]) then
 				return i
 			end if
 
-			if equal(lCleanStored, lCleanBMText) then
+			if equal(lCleanBMText, lCleanStored) then
 				return i
 			end if
 
-			if equal(lCleanStoredAlt, lCleanBMText) then
+			if equal(lCleanBMText, lCleanStoredAlt) then
 				return i
 			end if
 
 			if length(lCleanDisplayText) > 0 then
 
-				if equal(lCleanStored, lCleanDisplayText) then
+				if equal(lCleanDisplayText, lCleanStored) then
 					return i
 				end if
 
-				if equal(lCleanStoredAlt, lCleanDisplayText) then
+				if equal(lCleanDisplayText, lCleanStoredAlt) then
 					return i
 				end if
 
-				if length(lCleanStored) - length(lCleanDisplayText) <= 4 then
-					if match(lCleanDisplayText, lCleanStored) then
-						lPossibles = append(lPossibles, {abs(i - pHere), length(lCleanStored) - length(lCleanDisplayText),lCleanStored, i})
-					end if
-				end if
-				if not equal(lCleanStoredAlt, lCleanStored) then
-					if length(lCleanStoredAlt) - length(lCleanDisplayText) <= 4 then
-						if match(lCleanDisplayText, lCleanStoredAlt) then
-							lPossibles = append(lPossibles, {abs(i - pHere),length(lCleanStoredAlt) - length(lCleanDisplayText), lCleanStoredAlt, i})
-						end if
-					end if
-				end if
+-- 				if length(lCleanStored) - length(lCleanDisplayText) <= 4 then
+-- 					if match(lCleanDisplayText, lCleanStored) then
+-- 						lPossibles = append(lPossibles, {abs(i - pHere), length(lCleanStored) - length(lCleanDisplayText),lCleanStored, i})
+-- 					end if
+-- 				end if
+-- 				if not equal(lCleanStoredAlt, lCleanStored) then
+-- 					if length(lCleanStoredAlt) - length(lCleanDisplayText) <= 4 then
+-- 						if match(lCleanDisplayText, lCleanStoredAlt) then
+-- 							lPossibles = append(lPossibles, {abs(i - pHere),length(lCleanStoredAlt) - length(lCleanDisplayText), lCleanStoredAlt, i})
+-- 						end if
+-- 					end if
+-- 				end if
 
+				if match(lCleanDisplayText, lCleanStored) then
+					lPossibles = append(lPossibles, {sim_index(lCleanDisplayText, lCleanStored), length(lCleanStored) - length(lCleanDisplayText),lCleanStored, i})
+				end if
+				if match(lCleanDisplayText, lCleanStoredAlt) then
+					lPossibles = append(lPossibles, {sim_index(lCleanDisplayText, lCleanStoredAlt), length(lCleanStoredAlt) - length(lCleanDisplayText),lCleanStoredAlt, i})
+				end if
 			end if
 
 			if not equal(lCleanBMText, lCleanDisplayText) then
 
-				if equal(lCleanStored, lCleanBMText) then
+				if equal(lCleanBMText, lCleanStored) then
 					return i
 				end if
 
-				if equal(lCleanStoredAlt, lCleanBMText) then
+				if equal(lCleanBMText, lCleanStoredAlt) then
 					return i
 				end if
 
-				if length(lCleanStored) - length(lCleanBMText) <= 4 then
-					if match(lCleanBMText, lCleanStored) then
-						lPossibles = append(lPossibles, {abs(i - pHere), length(lCleanStored) - length(lCleanBMText), lCleanStored, i})
-					end if
-				end if
-				if not equal(lCleanStoredAlt, lCleanStored) then
-					if length(lCleanStoredAlt) - length(lCleanBMText) <= 4 then
-						if match(lCleanBMText, lCleanStoredAlt) then
-							lPossibles = append(lPossibles, {abs(i - pHere), length(lCleanStoredAlt) - length(lCleanBMText), lCleanStoredAlt, i})
-						end if
-					end if
-				end if
+-- 				if length(lCleanStored) - length(lCleanBMText) <= 4 then
+-- 					if match(lCleanBMText, lCleanStored) then
+-- 						lPossibles = append(lPossibles, {abs(i - pHere), length(lCleanStored) - length(lCleanBMText), lCleanStored, i})
+-- 					end if
+-- 				end if
+-- 				if not equal(lCleanStoredAlt, lCleanStored) then
+-- 					if length(lCleanStoredAlt) - length(lCleanBMText) <= 4 then
+-- 						if match(lCleanBMText, lCleanStoredAlt) then
+-- 							lPossibles = append(lPossibles, {abs(i - pHere), length(lCleanStoredAlt) - length(lCleanBMText), lCleanStoredAlt, i})
+-- 						end if
+-- 					end if
+-- 				end if
 
+				if match(lCleanBMText, lCleanStored) then
+					lPossibles = append(lPossibles, {sim_index(lCleanBMText, lCleanStored), length(lCleanStored) - length(lCleanBMText),lCleanStored, i})
+				end if
+				
+				if match(lCleanBMText, lCleanStoredAlt) then
+					lPossibles = append(lPossibles, {sim_index(lCleanBMText, lCleanStoredAlt), length(lCleanStoredAlt) - length(lCleanBMText),lCleanStoredAlt, i})
+				end if
 			end if
 		end for
 	end for
@@ -491,11 +516,12 @@ function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContex
 	if length(lPossibles) = 0 then
 		return 0
 	end if
-	if length(lPossibles) = 1 then
-		return lPossibles[1][4]
+	if length(lPossibles) > 1 then
+		lPossibles = sort_columns(lPossibles, {1, 2, -3})
 	end if
-
-	lPossibles = sort_columns(lPossibles, {1, 2, -3})
+	if vVerbose then
+		printf(1, "assumed match '%s' with '%s'\n", {pBMText, lPossibles[1][3]})
+	end if
 	return lPossibles[1][4]
 end function
 
@@ -1329,7 +1355,7 @@ function get_passthru(sequence pRawText, atom pFrom)
 	lText = Generate_Final(PassThru, lText)
 	return {lNewPos-1, lText}
 end function
-
+with trace
 ------------------------------------------------------------------------------
 function get_heading(sequence pRawText, atom pFrom)
 ------------------------------------------------------------------------------
@@ -1339,6 +1365,7 @@ function get_heading(sequence pRawText, atom pFrom)
 	integer lStartPos
 	integer lChar
 	sequence lBookMark
+	sequence lAliasText
 
 	lLevel = 0
 	lStartPos = 0
@@ -1370,10 +1397,13 @@ function get_heading(sequence pRawText, atom pFrom)
 	end while
 
 	-- Remove rest of line
+	lAliasText = ""
 	while lChar != '\n' and pFrom < length(pRawText) do
+		lAliasText &= lChar
 		pFrom += 1
 		lChar = pRawText[pFrom]
 	end while
+	lAliasText = cleanup(lAliasText)
 
 	if length(vReparseHeading) != 0 then
 		lText = call_func(vParser_rid, {lText, 1})
@@ -1400,7 +1430,7 @@ function get_heading(sequence pRawText, atom pFrom)
 	end if
 
 	vHeadings = append(vHeadings, {lLevel, lNums & lText})
-	lBookMark = sprintf("_%d_", length(vBookMarks)) & cleanup(lText)
+	lBookMark = sprintf("_%d_%s", {length(vBookMarks), cleanup(lText)})
 
 	lText = Generate_Final(Comment, vRawContext) &
 	        Generate_Final(Bookmark, lBookMark) &
@@ -1411,6 +1441,12 @@ function get_heading(sequence pRawText, atom pFrom)
 	end if
 
 	add_bookmark('h', length(vHeadings), lBookMark)
+	
+	if length(lAliasText) > 0 then
+		lBookMark = sprintf("_%d_%s", {length(vBookMarks), lAliasText})
+		add_bookmark('h', length(vHeadings), lBookMark)
+	end if
+	
 	return {pFrom-1, lText}
 end function
 
@@ -1959,7 +1995,7 @@ function get_nowiki(sequence pRawText, atom pFrom)
 
 	return {lNewPos-1, lText}
 end function
-
+with trace
 ------------------------------------------------------------------------------
 function get_link(sequence pRawText, atom pFrom)
 ------------------------------------------------------------------------------
@@ -1993,8 +2029,13 @@ function get_link(sequence pRawText, atom pFrom)
 
 	lPos = rmatch("->", lText, 0)
 	if lPos > 0 then
-		lURL = trim(lText[lPos + 2 .. $])
+		lURL = dequote(trim(lText[lPos + 2 .. $]))
 		lDisplayText = trim(lText[1 .. lPos - 1])
+		if length(lDisplayText) > 0 and lDisplayText[1] = ':' then
+			lURL = ':' & lURL
+			lDisplayText = lDisplayText[2..$]
+		end if
+		lDisplayText = dequote(lDisplayText)
 	else
 		lPos = eu:find('|', lText)
 		integer lPosR = length(lText)
@@ -2028,6 +2069,7 @@ function get_link(sequence pRawText, atom pFrom)
 				lText = lURL
 				lURL = lDisplayText
 				lDisplayText = lText
+				-- lURL >< lDisplayText
 			end if
 		end if
 	end if
@@ -2258,7 +2300,7 @@ function get_bookmark(sequence pRawText, integer pFrom)
 		lPos += 1
 	end if
 
-	lBookMarkText = lower(trim(lBookMarkText))
+	lBookMarkText = cleanup(lBookMarkText)
 
 	lReferenceText = trim(lReferenceText)
 
@@ -3134,8 +3176,8 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 					if compare_next({"CONTEXT:"}, pRawText, lPos + 1) > 0 then
 						lExtract = get_to_eol(pRawText, lPos + 10)
 						vRawContext = lExtract[2]
-						vCurrentContext = cleanup(lExtract[2], "/\\")
-						add_bookmark('a', cleanup(lExtract[2], "/\\."), cleanup(lExtract[2]))
+						vCurrentContext = cleanup(lExtract[2], "/\\.")
+						add_bookmark('a', vCurrentContext, cleanup(lExtract[2]))
 						lText &= Generate_Final(ContextChange, vRawContext)
 						lPos = lExtract[1]-1
 					else
@@ -3579,11 +3621,12 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 		lFrom = 1
 		for i = 1 to length(vUnresolved) do
 			if vVerbose then
-				printf(1, "Local Link #%5d of %5d (%s)\n", {i,length(vUnresolved),vUnresolved[i][1]})
+				printf(1, "Local Link #%5d of %5d (%s)\n", {i,length(vUnresolved),vUnresolved[i][2]})
 			end if
 			lIdx = find_bookmark(vUnresolved[i][1], vUnresolved[i][2], vUnresolved[i][3], vUnresolved[i][4])
 			if lIdx = 0 then
 				lPluginResult = Generate_Final(InternalLink,{"unresolved", vUnresolved[i][2]})
+				printf(1, "Unresolved link='%s' display='%s' context='%s'\n", vUnresolved[i][1..3])
 			else
 				lPluginResult = Generate_Final(QualifiedLink, {vBookMarks[lIdx][5],
 													vBookMarks[lIdx][3], vUnresolved[i][2]})
