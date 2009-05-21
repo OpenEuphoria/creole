@@ -151,8 +151,37 @@ sequence vRawContext = ""
 sequence vStyle = {"default"}
 integer  vVerbose = 0
 
-object   re_URL = re:new(#/\W(\w+)\.(\w+)\.(\w+)\W/)
-
+object   re_URL4 = re:new(#/\W(\w+)\.(\w+)\.(\w+)\.(\w+)\W/)
+object   re_URL3 = re:new(#/\W(\w+)\.(\w+)\.(\w+)\W/)
+constant vHonorifics = {"mr", "mrs", "miss", "ms", "dr", "sir"}
+constant vTLD = {
+"aero","asia","biz","cat","com","coop","edu","gov","info","int",
+"jobs","mil","mobi","museum","name","net","org","pro","tel","travel"
+			}
+			
+constant vCountry_TLD = -- These must be kept in ascending order.
+{
+"ac","ad","ae","af","ag","ai","al","am","an","ao","aq","ar","as",
+"at","au","aw","ax","az","ba","bb","bd","be","bf","bg","bh","bi",
+"bj","bm","bn","bo","br","bs","bt","bv","bw","by","bz","ca","cc",
+"cd","cf","cg","ch","ci","ck","cl","cm","cn","co","cr","cu","cv",
+"cx","cy","cz","de","dj","dk","dm","do","dz","ec","ee","eg","er",
+"es","et","eu","fi","fj","fk","fm","fo","fr","ga","gb","gd","ge",
+"gf","gg","gh","gi","gl","gm","gn","gp","gq","gr","gs","gt","gu",
+"gw","gy","hk","hm","hn","hr","ht","hu","id","ie","il","im","in",
+"io","iq","ir","is","it","je","jm","jo","jp","ke","kg","kh","ki",
+"km","kn","kp","kr","kw","ky","kz","la","lb","lc","li","lk","lr",
+"ls","lt","lu","lv","ly","ma","mc","md","me","mg","mh","mk","ml",
+"mm","mn","mo","mp","mq","mr","ms","mt","mu","mv","mw","mx","my",
+"mz","na","nc","ne","nf","ng","ni","nl","no","np","nr","nu","nz",
+"om","pa","pe","pf","pg","ph","pk","pl","pm","pn","pr","ps","pt",
+"pw","py","qa","re","ro","rs","ru","rw","sa","sb","sc","sd","se",
+"sg","sh","si","sj","sk","sl","sm","sn","so","sr","st","su","sv",
+"sy","sz","tc","td","tf","tg","th","tj","tk","tl","tm","tn","to",
+"tp","tr","tt","tv","tw","tz","ua","ug","uk","us","uy","uz","va",
+"vc","ve","vg","vi","vn","vu","wf","ws","ye","yt","yu","za","zm",
+"zw"}
+						
 -- Elements: This contains a list of interesting elements discovered during
 --           the parsing. They are in the order of being found, thus we can
 --           use this to do relative positioning processing.
@@ -2325,41 +2354,101 @@ function convert_url(sequence pText, object pMatch)
 	integer lFrom
 	integer lTo
 	integer lChar
-	
+	sequence tld
+	sequence lFound = {}
+
 	lResult = pText
 	loop do
+	
 		lFrom = pMatch[1][1]
 		lTo  = pMatch[1][2]
-		while lTo <= length(pText) do
-			lChar = pText[lTo]
-			if eu:find(lChar, " ,!:;'\n\t\"\\|]") > 0 then
-				exit
-			end if
-			if lChar = '~' then
-				if lTo < length(pText) then
-					lTo += 1
-					lChar = pText[lTo]
+		lRawURL = lResult[lFrom+1 .. lTo-1]
+		-- Check that the top-level-domain is reasonable.
+		if length(pMatch) = 5 then
+			-- we might have a country-abbrev.
+			if pMatch[5][2] - pMatch[5][1] != 1 then
+				-- Country codes are exactly 2-chars long.
+				pMatch = 0
+			else
+				tld = lResult[pMatch[5][1] .. pMatch[5][2]]
+				if binary_search(lower(tld), vCountry_TLD) <= 0 then
+					pMatch = 0
 				end if
 			end if
-			lTo += 1
-		end while
+		end if
 		
-		lRawURL = lResult[lFrom+1 .. lTo-1]
-		if eu:find(lResult[pMatch[2][1]], vDigits) or
-		   eu:find(lResult[pMatch[3][1]], vDigits) or
-		   eu:find(lResult[pMatch[4][1]], vDigits)
-		then
+		-- Check the tld
+		if sequence(pMatch) then
+			tld = lResult[pMatch[4][1] .. pMatch[4][2]]
+			if eu:find(lower(tld), vTLD) = 0 then
+				pMatch = 1
+			end if
+		end if
+		
+		-- The first two words both cannot be one char long.
+		if sequence(pMatch) then
+			if pMatch[2][1] = pMatch[2][2] and
+			   pMatch[3][1] = pMatch[3][2] then
+			   	pMatch = 2
+			end if
+		end if
+		
+		if sequence(pMatch) then
+			for i = 2 to length(pMatch) do
+				if eu:find(lResult[pMatch[i][1]], vDigits) then
+					pMatch = 3
+					exit
+				end if
+			end for
+		end if
+		
+		-- Check for honorifics in first word
+		if sequence(pMatch) then
+			tld = lResult[pMatch[2][1] .. pMatch[2][2]]
+			if eu:find(lower(tld), vHonorifics) != 0 then
+				pMatch = 4
+			end if
+		end if
+		
+		if sequence(pMatch) then
+			-- Scan forward after the potential URL to find the real end, allowing
+			-- for various arguments that might follow a url.
+			while lTo <= length(lResult) do
+				lChar = lResult[lTo]
+				if eu:find(lChar, " ,!:;'\n\t\"\\|]") > 0 then
+					exit
+				end if
+				if lChar = '~' then
+					if lTo < length(lResult) then
+						lTo += 1
+						lChar = lResult[lTo]
+					end if
+				end if
+				lTo += 1
+			end while
+		
+			lRawURL = lResult[lFrom+1 .. lTo-1]
+		end if
+		if atom(pMatch) then
 			lURL =  lRawURL
 		else
 			lURL = Generate_Final(NormalLink, {"http://" & lRawURL, lRawURL})
 		end if
+		lFound = append(lFound, lURL)
+		lURL = {length(lFound) + 9999}
 
 		lResult = lResult[1 .. lFrom] & lURL & lResult[lTo .. $]
 
-		lTo = lFrom + length(lURL)
-		pMatch = re:find(re_URL, lResult, lTo)
+		pMatch = re:find(re_URL4, lResult)
+		if atom(pMatch) then
+			pMatch = re:find(re_URL3, lResult)
+		end if
 	until atom(pMatch)
 
+	for i = 1 to length(lFound) do
+		lFrom = eu:find(i + 9999, lResult)
+		lResult = lResult[1 .. lFrom - 1] & lFound[i] & lResult[lFrom + 1 .. $]
+	end for
 	return lResult
 end function
 
@@ -2813,7 +2902,10 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 
 			-- Check for short-form urls.
 			if eu:find('.', lText) then
-				lExtract = re:find(re_URL, lText)
+				lExtract = re:find(re_URL4, lText)
+				if atom(lExtract) then
+					lExtract = re:find(re_URL3, lText)
+				end if
 				if sequence(lExtract) then
 					lText = convert_url(lText, lExtract)
 				end if
