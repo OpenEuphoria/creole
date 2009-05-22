@@ -142,8 +142,10 @@ sequence vUpperCase
 sequence vLowerCase
 sequence vAllLetters
 sequence vWordChars
+sequence vNameChars
 sequence vSpecialWordChars
 sequence vDigits
+sequence vWhiteSpace
 sequence vUnresolved = {}
 sequence vHeadingNums = {}
 sequence vCurrentContext = ""
@@ -151,8 +153,8 @@ sequence vRawContext = ""
 sequence vStyle = {"default"}
 integer  vVerbose = 0
 
-object   re_URL4 = re:new(#/\W(\w+)\.(\w+)\.(\w+)\.(\w+)\W/)
-object   re_URL3 = re:new(#/\W(\w+)\.(\w+)\.(\w+)\W/)
+object   re_URL4 = re:new(#/\W*(\w+)\.(\w+)\.(\w+)\.(\w+)\W*/)
+object   re_URL3 = re:new(#/\W*(\w+)\.(\w+)\.(\w+)\W*/)
 constant vHonorifics = {"mr", "mrs", "miss", "ms", "dr", "sir"}
 constant vTLD = {
 "aero","asia","biz","cat","com","coop","edu","gov","info","int",
@@ -260,6 +262,8 @@ procedure init()
 	vDigits    = "0123456789"
 	vSpecialWordChars = "_"
 	vWordChars = vAllLetters & vSpecialWordChars
+	vNameChars  = vWordChars & vDigits
+	vWhiteSpace = " \t"
 
 	vCodeColors = {
 			"#330033", --normal",
@@ -289,7 +293,7 @@ function cleanup( sequence pText, sequence pExtra = "")
 	integer lPos
 	sequence lChars
 
-	lChars = vWordChars & vDigits & pExtra
+	lChars = vNameChars & pExtra
 	lPos = 0
 
 	for i = 1 to length(pText) do
@@ -419,7 +423,7 @@ test_equal("find_nonspace 6a", 3, find_nonspace("abc", 3))
 test_equal("find_nonspace 7a", 3, find_nonspace(" abc", 3))
 test_equal("find_nonspace 8a", 9, find_nonspace(" \t \t \t\t abc", 3))
 end ifdef
-with trace
+
 ------------------------------------------------------------------------------
 function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContext, integer pHere)
 ------------------------------------------------------------------------------
@@ -922,10 +926,9 @@ function get_plugin(sequence pRawText, atom pFrom)
 	end if
 
 	-- Grab plugin name
-	lNameChars = vWordChars & vDigits
 	lPos = 1
 	while lPos <= length(lText) do
-		if eu:find(lText[lPos], lNameChars) = 0 then
+		if eu:find(lText[lPos], vNameChars) = 0 then
 			exit
 		end if
 		lPos += 1
@@ -1143,10 +1146,9 @@ function get_macro_definition(sequence pRawText, atom pFrom)
 	end if
 
 	-- Grab macro name
-	lNameChars = vWordChars & vDigits
 	lPos = 1
 	while lPos <= length(lText) do
-		if eu:find(lText[lPos], lNameChars) = 0 then
+		if eu:find(lText[lPos], vNameChars) = 0 then
 			exit
 		end if
 		lPos += 1
@@ -1223,10 +1225,9 @@ function get_macro_usage(sequence pRawText, atom pFrom, sequence pRecurse)
 	end if
 
 	-- Grab macro name
-	lNameChars = vWordChars & vDigits
 	lPos = 1
 	while lPos <= length(lText) do
-		if eu:find(lText[lPos], lNameChars) = 0 then
+		if eu:find(lText[lPos], vNameChars) = 0 then
 			exit
 		end if
 		lPos += 1
@@ -1383,7 +1384,7 @@ function get_passthru(sequence pRawText, atom pFrom)
 	lText = Generate_Final(PassThru, lText)
 	return {lNewPos-1, lText}
 end function
-with trace
+
 ------------------------------------------------------------------------------
 function get_heading(sequence pRawText, atom pFrom)
 ------------------------------------------------------------------------------
@@ -1898,7 +1899,7 @@ function get_list(sequence pRawText, atom pFrom)
 
 			if compare_begin( vLineBeginings, lNextLine[2]) > 0 then
 				-- Skip over leading white space
-				while lNextPos < length(pRawText) and eu:find(pRawText[lNextPos], " \t") do
+				while lNextPos < length(pRawText) and eu:find(pRawText[lNextPos], vWhiteSpace) do
 					lNextPos += 1
 				end while
 				-- Check if next line is also a list item
@@ -2023,7 +2024,7 @@ function get_nowiki(sequence pRawText, atom pFrom)
 
 	return {lNewPos-1, lText}
 end function
-with trace
+
 ------------------------------------------------------------------------------
 function get_link(sequence pRawText, atom pFrom)
 ------------------------------------------------------------------------------
@@ -2360,9 +2361,9 @@ function convert_url(sequence pText, object pMatch)
 	lResult = pText
 	loop do
 	
-		lFrom = pMatch[1][1]
-		lTo  = pMatch[1][2]
-		lRawURL = lResult[lFrom+1 .. lTo-1]
+		lFrom = pMatch[2][1]
+		lTo  = pMatch[$][2]
+		lRawURL = lResult[lFrom .. lTo]
 		-- Check that the top-level-domain is reasonable.
 		if length(pMatch) = 5 then
 			-- we might have a country-abbrev.
@@ -2413,9 +2414,11 @@ function convert_url(sequence pText, object pMatch)
 		if sequence(pMatch) then
 			-- Scan forward after the potential URL to find the real end, allowing
 			-- for various arguments that might follow a url.
-			while lTo <= length(lResult) do
+			while lTo < length(lResult) do
+				lTo += 1
 				lChar = lResult[lTo]
 				if eu:find(lChar, " ,!:;'\n\t\"\\|]") > 0 then
+					lTo -= 1
 					exit
 				end if
 				if lChar = '~' then
@@ -2424,10 +2427,9 @@ function convert_url(sequence pText, object pMatch)
 						lChar = lResult[lTo]
 					end if
 				end if
-				lTo += 1
 			end while
 		
-			lRawURL = lResult[lFrom+1 .. lTo-1]
+			lRawURL = lResult[lFrom .. lTo]
 		end if
 		if atom(pMatch) then
 			lURL =  lRawURL
@@ -2437,7 +2439,7 @@ function convert_url(sequence pText, object pMatch)
 		lFound = append(lFound, lURL)
 		lURL = {length(lFound) + 9999}
 
-		lResult = lResult[1 .. lFrom] & lURL & lResult[lTo .. $]
+		lResult = lResult[1 .. lFrom-1] & lURL & lResult[lTo+1 .. $]
 
 		pMatch = re:find(re_URL4, lResult)
 		if atom(pMatch) then
