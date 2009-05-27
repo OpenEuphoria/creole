@@ -4,7 +4,7 @@ include std/search.e
 constant kHTML = {
 				{"&", "&amp;"},
 				{"<", "&lt;"},
-				{"&gt;", "&gt;"}
+				{">", "&gt;"}
 	}
 
 with trace
