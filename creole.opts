@@ -1,0 +1,13 @@
+protocols  = {"HTTP:","FTP:","FILE:","HTTPS:","SVN:","GOPHER:","IRC:","NEWS:","NTTP:","MAILTO:"}
+-- The order of the color codes is ...
+--    normal
+--    comment
+--    keyword
+--    builtin
+--    string
+--    bracket1
+--    bracket2
+--    bracket3
+--    bracket4
+--    bracket5
+codecolors = {"#330033", "#FF0055","#0000FF","#9900CC","#00CC33","#880033","#993333","#0000FF","#5500FF","#00FF00"}

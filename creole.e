@@ -14,6 +14,8 @@ include std/map.e
 include std/types.e
 include std/sort.e
 include std/regex.e as re
+include std/map.e
+include std/filesys.e
 
 include euphoria/syncolor.e
 
@@ -232,6 +234,7 @@ object vMacros
 ------------------------------------------------------------------------------
 procedure init()
 ------------------------------------------------------------------------------
+	
 	vReparseHeading = ""
 	vHostID = ""
 	vProtocols = {
@@ -246,6 +249,19 @@ procedure init()
 				"NTTP:",
 				"MAILTO:"
 				}
+
+	vCodeColors = {
+			"#330033", --normal",
+			"#FF0055", --comment",
+			"#0000FF", --keyword",
+			"#00A033", --builtin",
+			"#330033", --string",
+			"#880033", --bracket1",
+			"#993333", --bracket2",
+			"#0000FF", --bracket3",
+			"#5500FF", --bracket4",
+			"#00FF00"  --bracket5"
+			}
 
 	set_colors({
 			{"NORMAL", 1},
@@ -265,24 +281,17 @@ procedure init()
 	vNameChars  = vWordChars & vDigits
 	vWhiteSpace = " \t"
 
-	vCodeColors = {
-			"#330033", --normal",
-			"#FF0055", --comment",
-			"#0000FF", --keyword",
-			"#00A033", --builtin",
-			"#330033", --string",
-			"#880033", --bracket1",
-			"#993333", --bracket2",
-			"#0000FF", --bracket3",
-			"#5500FF", --bracket4",
-			"#00FF00"  --bracket5"
-			}
-
 	vPluginList = {}
 	vBookMarks = {}
 	vHeadings = {}
 	vHeadingNums = {}
 	vMacros = map:new()
+
+	object base_options = map:load_map( locate_file("creole.opts") )
+	if map(base_options) then
+		vProtocols = map:get( base_options, "protocols", vProtocols)
+		vCodeColors = map:get( base_options, "codecolors", vCodeColors)
+	end if
 
 end procedure
 init()
