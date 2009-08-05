@@ -155,8 +155,8 @@ sequence vRawContext = ""
 sequence vStyle = {"default"}
 integer  vVerbose = 0
 
-object   re_URL4 = re:new(#/\W*(\w+)\.(\w+)\.(\w+)\.(\w+)\W*/)
-object   re_URL3 = re:new(#/\W*(\w+)\.(\w+)\.(\w+)\W*/)
+object   re_URL4 = re:new(`/\W*(\w+)\.(\w+)\.(\w+)\.(\w+)\W*`)
+object   re_URL3 = re:new(`/\W*(\w+)\.(\w+)\.(\w+)\W*`)
 constant vHonorifics = {"mr", "mrs", "miss", "ms", "dr", "sir"}
 constant vTLD = {
 "aero","asia","biz","cat","com","coop","edu","gov","info","int",
@@ -2033,6 +2033,42 @@ function get_nowiki(sequence pRawText, atom pFrom)
 
 	return {lNewPos-1, lText}
 end function
+with trace
+------------------------------------------------------------------------------
+function get_linebroken(sequence pRawText, atom pFrom)
+------------------------------------------------------------------------------
+	sequence lText
+	integer lEndPos
+	integer lStartPos
+	integer lNewPos
+
+	lStartPos = pFrom + 3
+	lEndPos = match_from("]]]", pRawText, lStartPos + 1)
+
+	if lEndPos = 0 or pRawText[lEndPos - 1] = '~' then
+		-- Missing end-of-linebroken tag so return begining tag as literal text.
+		return {lStartPos-1, "[[["}
+	end if
+
+	lNewPos = lEndPos + 3
+	while lNewPos <= length(pRawText) and pRawText[lNewPos] = ']' do
+		lNewPos += 1
+	end while
+	lEndPos = lNewPos - 3
+
+	lText = replace_all(pRawText[lStartPos .. lEndPos - 1], "\n", "\\\\\n")
+	if length(lText) = 0 then
+		lText = `\\`
+	elsif lText[$] != '\n' then
+		lText &= `\\`
+	end if
+	
+	lText = call_func(vParser_rid, {lText, 0})
+	
+	--Generate_Final(NoWikiBlock, {Generate_Final(Sanitize,pRawText[lStartPos .. lEndPos - 1])})
+
+	return {lNewPos-1, lText}
+end function
 
 ------------------------------------------------------------------------------
 function get_link(sequence pRawText, atom pFrom)
@@ -3034,8 +3070,18 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 				end if
 				break
 
-			case '<' then   -- Plugin or EUCODE colorization
-
+			case '<' then   -- Plugin,EUCODE colorization, or un-indent.
+				if pSpan = 0 then
+					sequence temps
+					temps = pRawText[lPos .. lPos + 3]
+					if compare_next({"\n", `\\`, ` \\`, " \n"}, pRawText, lPos+1) > 0 then
+						-- Reduce indentation
+						lText = Generate_Final(EndIndent, {})
+						lIndentLevel -= 1
+						lChar = -1
+					end if
+				end if
+				
 				if pSpan != 4 and compare_next({"<"}, pRawText, lPos) > 0 then
 					lExtract = get_plugin(pRawText, lPos)
 					lPos = lExtract[2]
@@ -3117,6 +3163,14 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 				break
 
 			case '[' then   -- link
+				if compare_next({"[["}, pRawText, lPos) > 0 then
+					lExtract = get_linebroken(pRawText, lPos)
+					lPos = lExtract[1]
+					lText &= lExtract[2]
+					lChar = -1
+					break
+				end if
+				
 				if compare_next({"["}, pRawText, lPos) != 0 then
 					lExtract = get_link(pRawText, lPos)
 					lPos = lExtract[1]

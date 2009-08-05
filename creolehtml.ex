@@ -701,7 +701,7 @@ procedure main(sequence pArgs)
 	sequence lDefn
 	integer lDelimPos
 
-	vPublishedDate = sprintf("%s\n", {format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
+	vPublishedDate = sprintf("%s\n", {datetime:format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
 	lPos = 3
 	lCount = length(pArgs)
 	while 1 do
