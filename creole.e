@@ -2152,13 +2152,14 @@ function get_link(sequence pRawText, atom pFrom)
 	end if
 
 	if length(lURL) > 0 then
-		lPos = eu:find(':', lURL)
+		lPos = eu:find(':', lURL) + begins('/', lURL)
 		if lPos = 0 then
+			
 			-- Internal link.
 			lText = Generate_Final(InternalLink, {lURL, call_func(vParser_rid, {lDisplayText, 2})})
 
 		else
-			if match("://", lURL) > 0 or match("mailto:", lURL) = 1 then
+			if match("://", lURL) > 0 or match("mailto:", lURL) = 1 or begins('/', lURL) then
 				-- assume it is an normal link
 				if lParseText then
 					lText = Generate_Final(NormalLink, {lURL, call_func(vParser_rid, {lDisplayText, 2})})
