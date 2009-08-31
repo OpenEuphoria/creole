@@ -226,6 +226,7 @@ sequence vBookMarks = {}
 --    format: [1] = Depth (level)
 --            [2] = Text (including numbering if applicable)
 sequence vHeadings = {}
+sequence vHeadingBMIndex = {}
 
 sequence vCodeColors
 
@@ -1479,6 +1480,7 @@ function get_heading(sequence pRawText, atom pFrom)
 	end if
 
 	add_bookmark('h', length(vHeadings), lBookMark)
+	vHeadingBMIndex = append(vHeadingBMIndex, length(vBookMarks))
 	
 	if length(lAliasText) > 0 then
 		lBookMark = sprintf("_%d_%s", {length(vBookMarks), lAliasText})
@@ -1729,7 +1731,7 @@ function get_eucode(sequence pRawText, atom pFrom)
 	sequence lLine
 	object lPattern
 	integer leadline
-	
+
 	pFrom += length("<eucode>")
 
 	lFinal = eu:match("</eucode>", pRawText, pFrom)
@@ -2051,7 +2053,7 @@ function get_nowiki(sequence pRawText, atom pFrom)
 
 	return {lNewPos-1, lText}
 end function
-with trace
+
 ------------------------------------------------------------------------------
 function get_linebroken(sequence pRawText, atom pFrom)
 ------------------------------------------------------------------------------
@@ -3430,14 +3432,9 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 					--     [6] = Pointer to the Element sequence for the bookmark
 					--           associated with the heading.
 				for i = 1 to length(vHeadings) do
-					for j = 1 to length(vBookMarks) do
-						if match({'h',i}, vBookMarks[j]) = 1 then
-							if vHeadings[i][1] <= pContext then
-								lText = append(lText, vHeadings[i][1..2] & vBookMarks[j][3..$])
-							end if
-							exit
-						end if
-					end for
+					integer j
+					j = vHeadingBMIndex[i]
+					lText = append(lText, vHeadings[i][1..2] & vBookMarks[j][3..$])
 				end for
 				break
 
@@ -3757,21 +3754,24 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 
 		-- Standardise line endings
 		lFrom = 1
+		integer has_nl = eu:find('\n', pRawText)
 		while 1 do
 			lPos = find_from('\r', pRawText, lFrom)
 			if lPos = 0 then
 				exit
 			end if
+			
 			if lPos < length(pRawText) then
 				if pRawText[lPos + 1] = '\n' then
 					pRawText[lPos] = ' '
-				else
+				elsif has_nl = 0 then
 					pRawText[lPos] = '\n'
+				else
+					pRawText[lPos] = ' '
 				end if
 			end if
 			lFrom = lPos + 1
 		end while
-
 		if vVerbose then
 			puts(1, "Processing macros.\n")
 		end if
@@ -3818,16 +3818,29 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 		if vVerbose then
 			puts(1, "Processing plugins.\n")
 		end if
-		lFrom = 1
+		lPluginResult = repeat(0, length(vPluginList))
+		integer lPluginLength = 0
 		for i = 1 to length(vPluginList) do
-			lPluginResult = Generate_Final(Plugin, vPluginList[i])
+			if vVerbose then
+				printf(1, "Generating plugin #%5d of %5d\n", {i,length(vPluginList)})
+			end if
+			lPluginResult[i] = Generate_Final(Plugin, vPluginList[i])
+			lPluginLength += length(lPluginResult[i])
+		end for
+		
+		integer lEndPos = length(lText)
+		lFrom = 1
+		lText &= repeat(' ', lPluginLength - (2 * length(vPluginList)))
+		for i = 1 to length(vPluginList) do
 			lPos = match_from({TAG_PLUGIN, i}, lText, lFrom)
 			if vVerbose then
-				printf(1, "Executing plugin #%5d of %5d\n", {i,length(vPluginList)})
+				printf(1, "Inserting plugin #%5d of %5d\n", {i,length(vPluginList)})
 			end if
 			if lPos > 0 then
-				lText = lText[1 .. lPos - 1] & lPluginResult & lText[lPos + 2 .. $]
-				lFrom += length(lPluginResult) - 2
+				lText[lPos + length(lPluginResult[i]) .. lEndPos + length(lPluginResult[i]) - 2 ] = lText[lPos + 2 .. lEndPos]
+				lText[lPos .. lPos + length(lPluginResult[i]) - 1] = lPluginResult[i]
+				lFrom = lPos + length(lPluginResult[i])
+				lEndPos += length(lPluginResult[i]) - 2
 			end if
 		end for
 
