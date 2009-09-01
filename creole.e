@@ -1777,10 +1777,13 @@ function get_eucode(sequence pRawText, atom pFrom)
 			if length(lLine) > 0 then
 				lColorSegments = SyntaxColor(lLine)
 				for i = 1 to length(lColorSegments) do
-						lText &= Generate_Final(ColorText,
+						if length(trim(lColorSegments[i][2])) > 0 then
+							lText &= Generate_Final(ColorText,
 										{vCodeColors[lColorSegments[i][1]],
 										 Generate_Final(Sanitize, lColorSegments[i][2])})
-
+						else
+							lText &= lColorSegments[i][2]
+						end if
 				end for
 				lText &= '\n'
 				lStartPos = lEndPos
