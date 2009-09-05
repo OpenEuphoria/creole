@@ -9,7 +9,7 @@ constant kHTML = {
 
 with trace
 ------------------------------------------------------------------------------
-global function html_generator(integer pAction, sequence pParms)
+global function html_generator(integer pAction, sequence pParms, object pContext = "")
 ------------------------------------------------------------------------------
 	sequence lHTMLText
 	sequence lSuffix
