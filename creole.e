@@ -3436,6 +3436,9 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 					--           associated with the heading.
 				for i = 1 to length(vHeadings) do
 					integer j
+					if vHeadings[i][1] > pContext then
+						continue
+					end if
 					j = vHeadingBMIndex[i]
 					lText = append(lText, vHeadings[i][1..2] & vBookMarks[j][3..$])
 				end for
