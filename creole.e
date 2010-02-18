@@ -1380,7 +1380,8 @@ function get_passthru(sequence pRawText, atom pFrom)
 		if pRawText[lEndPos - 1] = '~' then
 			lFoundEnd = 0 -- because end tag not at start of a line.
 		end if
-	until lFoundEnd = 1
+		until lFoundEnd = 1
+	end loop
 
 	lNewPos = lEndPos + 2
 	while lNewPos <= length(pRawText) and pRawText[lNewPos] = '`' do
@@ -2047,7 +2048,8 @@ function get_nowiki(sequence pRawText, atom pFrom)
 				lFoundEnd = 0 -- because end tag not on a line by itself.
 			end if
 		end if
-	until lFoundEnd = 1
+		until lFoundEnd = 1
+	end loop
 
 	lNewPos = lEndPos + 3
 	while lNewPos <= length(pRawText) and pRawText[lNewPos] = '}' do
@@ -2649,7 +2651,8 @@ function convert_url(sequence pText, object pMatch)
 		if atom(pMatch) then
 			pMatch = re:find(re_URL3, lResult)
 		end if
-	until atom(pMatch)
+		until atom(pMatch)
+	end loop
 
 	for i = 1 to length(lFound) do
 		lFrom = eu:find(i + 9999, lResult)
