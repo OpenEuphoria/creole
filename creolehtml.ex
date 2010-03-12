@@ -39,9 +39,9 @@ KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/euwiki.cgi?"}}
 function fixup_seps(sequence pFileName)
 -----------------------------------------------------------------
 ifdef WIN32 then
-	return search:find_replace('/', pFileName, SLASH)
+	return search:match_replace('/', pFileName, SLASH)
 elsedef
-	return search:find_replace('\\', pFileName, SLASH)
+	return search:match_replace('\\', pFileName, SLASH)
 end ifdef
 end function
 
@@ -345,7 +345,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 							lValue[2] = 2
 						end if
 					elsif equal(lParms[i][1], "spacer") then
-						lSpacer = search:find_replace("^", lParms[i][2], " ")
+						lSpacer = search:match_replace("^", lParms[i][2], " ")
 					end if
 				end for
 				
