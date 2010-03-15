@@ -19,6 +19,8 @@ include std/filesys.e
 
 include euphoria/syncolor.e
 
+constant paren_end_re = re:new(`\([a-z0-9]+\)$`)
+
 object gDebug gDebug = 0
 global enum     -- Action Codes for the Generator
 	HostID,             -- id of application hosting this parser
@@ -152,6 +154,7 @@ sequence vWhiteSpace
 sequence vUnresolved = {}
 sequence vHeadingNums = {}
 sequence vCurrentContext = ""
+sequence vCurrentNamespace = ""
 sequence vRawContext = ""
 sequence vStyle = {"default"}
 integer  vVerbose = 0
@@ -298,6 +301,7 @@ procedure init()
 end procedure
 init()
 
+-- returns a string containing only characters in vNameChars and in pExtra.
 ------------------------------------------------------------------------------
 function cleanup( sequence pText, sequence pExtra = "")
 ------------------------------------------------------------------------------
@@ -3517,8 +3521,14 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 			case '!' then   -- wiki comment
 				if compare_next({"!"}, pRawText, lPos) > 0 then
 					if compare_next({"CONTEXT:"}, pRawText, lPos + 1) > 0 then
+						object out
 						lExtract = get_to_eol(pRawText, lPos + 10)
 						vRawContext = lExtract[2]
+						out = re:find(paren_end_re, vRawContext)
+						if sequence(out) then
+							vCurrentNamespace = vRawContext[out[1][1]..out[1][2]] 
+							vRawContext = vRawContext[1..out[1][1]-1] & vRawContext[out[1][2]+1..$]
+						end if
 						vCurrentContext = cleanup(lExtract[2], "/\\.")
 						add_bookmark('a', vCurrentContext, cleanup(lExtract[2]))
 						lText &= Generate_Final(ContextChange, vRawContext)
