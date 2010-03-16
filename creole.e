@@ -440,7 +440,8 @@ test_equal("find_nonspace 8a", 9, find_nonspace(" \t \t \t\t abc", 3))
 end ifdef
 
 ------------------------------------------------------------------------------
-function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContext, integer pHere)
+function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContext, integer pHere, 
+	object pNameSpace)
 ------------------------------------------------------------------------------
 	sequence lCleanBMText
 	sequence lCleanDisplayText
@@ -482,7 +483,8 @@ function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContex
 				return i
 			end if
 
-			if equal(pDisplayText, vBookMarks[i][3]) then
+			if (equal(vBookMarks[5],pNameSpace) or atom(pNameSpace)) and
+				equal(pDisplayText, vBookMarks[i][3]) then
 				return i
 			end if
 
@@ -2154,6 +2156,7 @@ function get_link(sequence pRawText, atom pFrom)
 	-- Pull out the whole link tag and data
 
 	lText = trim(pRawText[pFrom + 2 .. lEndPos - 1])
+	trace(compare("lText","match")=0)
 	if length(lText) = 0 then
 		return {lEndPos + 1, ""}
 	end if
@@ -2231,7 +2234,17 @@ function get_link(sequence pRawText, atom pFrom)
 					-- but we can't do that until after all the bookmarks have been
 					-- processed. So for now, just insert a placemarker and defer
 					-- resolution to just before we hand back the documents.
-					vUnresolved = append(vUnresolved, {lURL, lDisplayText, vCurrentContext, length(vElements)+1})
+					integer colon_loc = 0
+					if length(lURL)>=2 then
+						colon_loc = find_from(':',lURL,2)
+					end if
+					if colon_loc then
+						sequence namespace = lURL[2..colon_loc]	
+						lURL = lURL[colon_loc+1..$]
+						vUnresolved = append(vUnresolved, {lURL, lDisplayText, vCurrentContext, length(vElements)+1, namespace})
+					else					
+						vUnresolved = append(vUnresolved, {lURL, lDisplayText, vCurrentContext, length(vElements)+1, vCurrentNamespace})
+					end if
 					lText = {TAG_UNRESOLVED, length(vUnresolved)}
 					vElements = append(vElements, {'u', length(vUnresolved)})
 				else
@@ -3982,7 +3995,8 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			if vVerbose then
 				printf(1, "Local Link #%5d of %5d (%s)\n", {i,length(vUnresolved),vUnresolved[i][2]})
 			end if
-			lIdx = find_bookmark(vUnresolved[i][1], vUnresolved[i][2], vUnresolved[i][3], vUnresolved[i][4])
+			lIdx = find_bookmark(vUnresolved[i][1], vUnresolved[i][2], vUnresolved[i][3], vUnresolved[i][4],
+			vUnresolved[i][5])
 			if lIdx = 0 then
 				lPluginResult = Generate_Final(InternalLink,{"unresolved", vUnresolved[i][2]})
 				printf(1, "Unresolved link='%s' display='%s' context='%s'\n", vUnresolved[i][1..3])
