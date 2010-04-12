@@ -598,8 +598,11 @@ procedure Generate(sequence pFileName)
 	end if	
 	
 	vCurrentContext = pFileName
-	object VOID = creole_parse(Set_Option, CO_Verbose)
-
+	
+	if vVerbose then
+		object VOID = creole_parse(Set_Option, CO_Verbose )
+	end if
+	
 	lOutText = creole_parse(lContent, routine_id("generate_html"), vCurrentContext)
 	if length(lOutText) > 0 then
 		if atom(lOutText[1]) then
