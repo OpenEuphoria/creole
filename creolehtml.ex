@@ -812,6 +812,13 @@ procedure main(sequence pArgs)
 					lValue = creole_parse(Set_Option, CO_MaxNumLevel, lValue[2])
 				end if
 				
+			elsif pArgs[lPos][2] = 'd' then -- template directory
+				if find(pArgs[lPos][3], "=:") > 0 then
+					lValue = pArgs[lPos][4..$]
+				else
+					lValue = pArgs[lPos][3..$]
+				end if
+				setTemplateDirectory( lValue )
 				
 			elsif pArgs[lPos][2] = '-' then -- Output directory
 				-- A comment so ignore it
