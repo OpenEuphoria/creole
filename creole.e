@@ -4046,7 +4046,6 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			lPos = match_from({TAG_UNRESOLVED, i}, lText, lFrom)
 			if lPos > 0 then
 				lText = replace( lText, lPluginResult, lPos, lPos + 1 )
--- 				lText = lText[1 .. lPos - 1] & lPluginResult & lText[lPos + 2 .. $]
 				lFrom += length(lPluginResult) - 2
 			end if
 		end for
