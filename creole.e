@@ -223,14 +223,30 @@ sequence vPluginList = {}
 --            [5] = The name of the generated output file. If blank, there is
 --                  no file spliting being done.
 --            [6] = Pointer to the Element sequence for this bookmark.
+--            [7] = The name cleaned up for finding purposes
 sequence vBookMarks = {}
-
+enum
+	BM_TYPE,
+	BM_POINTER,
+	BM_NAME,
+	BM_SUBCONTEXT_ID,
+	BM_FILENAME,
+	BM_ELEMENT_PTR,
+	BM_CLEAN_NAME,  -- processed by find_bookmark
+	BM_GETHEADINGS, -- BM_NAME..BM_ELEMENT_PTR
+	BM_ELEMENTS, -- type='h' BM_NAME..BM_FILENAME
+	             -- type='p' BM_POINTER..BM_ELEMENT_PTR
+	$
 
 -- Headings: This contains a list of headings found.
 --    format: [1] = Depth (level)
 --            [2] = Text (including numbering if applicable)
 sequence vHeadings = {}
 sequence vHeadingBMIndex = {}
+
+enum 
+	H_DEPTH,
+	H_TEXT
 
 sequence vCodeColors
 
@@ -319,8 +335,12 @@ function cleanup( sequence pText, sequence pExtra = "")
 			end if
 		end if
 	end for
-
-	return lower(pText[1..lPos])
+	
+	if lPos != length(pText) then
+		return lower(pText[1..lPos])
+	else
+		return lower(pText)
+	end if
 end function
 
 ifdef UNITTEST then
@@ -456,38 +476,44 @@ function find_bookmark(sequence pBMText, sequence pDisplayText, sequence pContex
 	-- Next, look through the bookmarks out of the supplied context.
 	for x = 1 to 2 do
 		for i = 1 to length(vBookMarks) do
-			lCleanStored = cleanup(vBookMarks[i][3])
-			if lCleanStored[1] = '_' then
-				integer pos
-				pos = find_from('_', lCleanStored, 2)
-				if pos != 0 then
-					lCleanStored = lCleanStored[pos+1 .. $]
-				end if
-			end if
 			
-			if sequence(vBookMarks[i][2]) then
-				lCleanStoredAlt = cleanup(vBookMarks[i][2])
+			if sequence(vBookMarks[i][BM_POINTER]) then
+				lCleanStoredAlt = cleanup(vBookMarks[i][BM_POINTER])
 			else
 				lCleanStoredAlt = ""
 			end if
 			if x = 1 then
-				if not equal(vBookMarks[i][4], pContext) then
+				if not equal(vBookMarks[i][BM_SUBCONTEXT_ID], pContext) then
 					continue
 				end if
 			else -- x = 2 
-				if equal(vBookMarks[i][4], pContext) then
+				if equal(vBookMarks[i][BM_SUBCONTEXT_ID], pContext) then
 					continue
 				end if
 			end if
-			if equal(pBMText, vBookMarks[i][3]) then
+			if equal(pBMText, vBookMarks[i][BM_NAME]) then
 				return i
 			end if
 
-			if (equal(vBookMarks[5],pNameSpace) or atom(pNameSpace)) and
-				equal(pDisplayText, vBookMarks[i][3]) then
+			if (equal(vBookMarks[BM_FILENAME],pNameSpace) or atom(pNameSpace)) and
+				equal(pDisplayText, vBookMarks[i][BM_NAME]) then
 				return i
 			end if
-
+			
+			if sequence( vBookMarks[i][BM_CLEAN_NAME] ) then
+				lCleanStored = vBookMarks[i][BM_CLEAN_NAME]
+			else
+				lCleanStored = cleanup(vBookMarks[i][3])
+				if lCleanStored[1] = '_' then
+					integer pos
+					pos = find_from('_', lCleanStored, 2)
+					if pos != 0 then
+						lCleanStored = lCleanStored[pos+1 .. $]
+					end if
+				end if
+				vBookMarks[i][BM_CLEAN_NAME] = lCleanStored
+			end if
+			
 			if equal(lCleanBMText, lCleanStored) then
 				return i
 			end if
@@ -810,9 +836,16 @@ procedure add_bookmark(integer pType, object pTypeLink, sequence pText)
 	lElement_No = length(vElements) + 1
 	lBM_No = length(vBookMarks) + 1
 	if length(vSplitFile) > 0 then
-		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, vSplitFile[$], lElement_No}
+		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, vSplitFile[$], lElement_No, 0, 0, 0}
 	else
-		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, "", lElement_No}
+		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, "", lElement_No, 0, 0, 0}
+	end if
+	
+	lNewBM[BM_GETHEADINGS] = lNewBM[BM_NAME..BM_ELEMENT_PTR]
+	if pType = 'h' then
+		lNewBM[BM_ELEMENTS] = lNewBM[BM_NAME..BM_FILENAME]
+	else
+		lNewBM[BM_ELEMENTS] = lNewBM[BM_POINTER..BM_ELEMENT_PTR]
 	end if
 	vBookMarks = append(vBookMarks, lNewBM)
 	vElements = append(vElements, {'b', lBM_No})
@@ -3594,7 +3627,6 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 	return lFinalForm
 end function
 
-
 vParser_rid = routine_id("parse_text")
 --------------------------------------------------------------------------------
 global function creole_parse(object pRawText, object pFinalForm_Generator = -1, object pContext = "")
@@ -3624,12 +3656,10 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 					--     [6] = Pointer to the Element sequence for the bookmark
 					--           associated with the heading.
 				for i = 1 to length(vHeadings) do
-					integer j
-					if vHeadings[i][1] > pContext then
+					if vHeadings[i][H_DEPTH] > pContext then
 						continue
 					end if
-					j = vHeadingBMIndex[i]
-					lText = append(lText, vHeadings[i][1..2] & vBookMarks[j][3..$])
+					lText = append( lText, vHeadings[i] & vBookMarks[vHeadingBMIndex[i]][BM_GETHEADINGS] )
 				end for
 				break
 
@@ -3651,7 +3681,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 						lIdx = vElements[j][2]
 						if vBookMarks[lIdx][1] = 'h' then
 							lHdIdx = vBookMarks[lIdx][2]
-							lText = vHeadings[lHdIdx][1..2] & vBookMarks[lIdx][3..$]
+							lText = vHeadings[lHdIdx] & vBookMarks[BM_GETHEADINGS]
 							exit
 						end if
 					end if
@@ -3680,11 +3710,11 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 				for i = 1 to length(vElements) do
 					if vElements[i][1] = 'b' then
 						lIdx = vElements[i][2]
-						if vBookMarks[lIdx][1] = 'h' then
-							lHdIdx = vBookMarks[lIdx][2]
+						if vBookMarks[lIdx][BM_TYPE] = 'h' then
+							lHdIdx = vBookMarks[lIdx][BM_POINTER]
 							lText = append(lText,
-								'h' & vHeadings[lHdIdx][1..2] &
-								vBookMarks[lIdx][3..$-1])
+								'h' & vHeadings[lHdIdx] &
+								vBookMarks[lIdx][BM_ELEMENTS])
 						end if
 					elsif vElements[i][1] = 'p' then
 						lText = append(lText,
@@ -3710,16 +3740,16 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 				for i = 1 to length(vElements) do
 					if vElements[i][1] = 'b' then
 						lIdx = vElements[i][2]
-						if vBookMarks[lIdx][1] = 'h' then
-							lHdIdx = vBookMarks[lIdx][2]
-							lLevel = vHeadings[lHdIdx][1]
+						if vBookMarks[lIdx][BM_TYPE] = 'h' then
+							lHdIdx = vBookMarks[lIdx][BM_POINTER]
+							lLevel = vHeadings[lHdIdx][H_DEPTH]
 							lText = append(lText,
-								'h' & vHeadings[lHdIdx][1..2] &
-								vBookMarks[lIdx][3..$])
-						elsif vBookMarks[lIdx][1] = 'a' then
+								'h' & vHeadings[lHdIdx] &
+								vBookMarks[lIdx][BM_ELEMENTS])
+						elsif vBookMarks[lIdx][BM_TYPE] = 'a' then
 							lText = append(lText,
 								'a' & lLevel &
-								vBookMarks[lIdx][2..$])
+								vBookMarks[lIdx][BM_ELEMENTS])
 						end if
 					end if
 				end for
@@ -4015,7 +4045,8 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 
 			lPos = match_from({TAG_UNRESOLVED, i}, lText, lFrom)
 			if lPos > 0 then
-				lText = lText[1 .. lPos - 1] & lPluginResult & lText[lPos + 2 .. $]
+				lText = replace( lText, lPluginResult, lPos, lPos + 1 )
+-- 				lText = lText[1 .. lPos - 1] & lPluginResult & lText[lPos + 2 .. $]
 				lFrom += length(lPluginResult) - 2
 			end if
 		end for
