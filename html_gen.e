@@ -7,6 +7,8 @@ constant kHTML = {
 				{">", "&gt;"}
 	}
 
+export integer use_span_for_color = 1
+
 with trace
 ------------------------------------------------------------------------------
 global function html_generator(integer pAction, sequence pParms, object pContext = "")
@@ -120,7 +122,11 @@ global function html_generator(integer pAction, sequence pParms, object pContext
 			lHTMLText = "<ins>" & pParms[1] & "</ins>"
 
 		case ColorText then
-			lHTMLText = "<span style=\"color:" & pParms[1] & ";\">" & pParms[2] & "</span>"
+			if use_span_for_color then
+				lHTMLText = "<span style=\"color:" & pParms[1] & ";\">" & pParms[2] & "</span>"
+			else
+				lHTMLText = "<font color=\"" & pParms[1] & "\">" & pParms[2] & "</font>"
+			end if
 
 		case CodeExample then
 			lHTMLText = "\n<pre class=\"examplecode\">" & pParms[1] &  "</pre>\n"

@@ -823,6 +823,9 @@ procedure main(sequence pArgs)
 				end if
 				setTemplateDirectory( lValue )
 				
+			elsif equal( pArgs[lPos], "-htmldoc") then
+				use_span_for_color = 0
+				
 			elsif pArgs[lPos][2] = '-' then -- Output directory
 				-- A comment so ignore it
 				
