@@ -607,12 +607,20 @@ procedure Generate(sequence pFileName)
 	if length(lOutText) > 0 then
 		if atom(lOutText[1]) then
 			fh = open(lOutFile, "w")
+			if fh = -1 then
+				printf(STDERR, "Cannot open \'%s\' for writing.\n", {lOutFile})
+				abort(1)
+			end if
 			puts(fh, lOutText)
 			close(fh)
 		else
 			for i = 1 to length(lOutText) do
 				lOutFile = make_filename(lOutText[i][1])
 				fh = open(lOutFile, "w")
+				if fh = -1 then
+					printf(STDERR, "Cannot open \'%s\' for writing.\n", {lOutFile})
+					abort(1)
+				end if
 				puts(fh, lOutText[i][2])
 				close(fh)	
 			end for
