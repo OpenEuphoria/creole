@@ -81,6 +81,7 @@ function make_filename(sequence pBaseName, object pLinkDir = 0)
 end function
 
 sequence vStatus = {}
+
 -----------------------------------------------------------------
 function generate_html(integer pAction, sequence pParms, object pContext)
 -----------------------------------------------------------------
@@ -293,6 +294,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				kan:setValue(lData, "toc", make_filename(lTOCFile,""))
 				kan:setValue(lData, "publishedon", vPublishedDate)
 				lHeadings = kan:loadTemplateFromFile(vTemplateFile)
+
 				if atom(lHeadings) then
 					printf(2,"\n*** Failed to load template from '%s'\n", {vTemplateFile})
 					abort(1)
@@ -303,12 +305,13 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 							"  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" &
 							"  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" &
 							"\n" &
-							"<html>\n" &
+							"<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n" &
 							"\n" &
 							"<head>\n" &
+							"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n" & 
 							" <title>" & lHeadings & "</title>\n" &
 							" <link rel=\"stylesheet\" media=\"screen, projection, print\" type=\"text/css\" href=\"style.css\"/>\n" &
-							"<meta source=\"" & lThisContext & "\" />\n" &
+							"<!-- source=\"" & lThisContext & "\" -->\n" &
 							"</head>\n" &
 							"<body>\n" & 
 							pParms[1] &
@@ -500,10 +503,14 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 
 end function
 
+sequence bm_level_names = repeat("", 6)
+
 -----------------------------------------------------------------
 function bmcleanup(sequence pBookMark)
 -----------------------------------------------------------------
 	sequence lText
+	sequence lSortText
+	sequence lDisplayText
 	integer lPos
 	
 	-- The display text might be blank
@@ -513,26 +520,79 @@ function bmcleanup(sequence pBookMark)
 		lText = pBookMark[3]    -- Use display text
 	end if
 	
-	-- Do a case-insensitive comparison
-	lText = lower(lText)
-	
 	-- For headings, strip off any leading numbering.
 	if pBookMark[1] = 'h' then
 		if find(lText[1], "123456789") then
-			lPos = find(';', lText)
+			lPos = find(' ', lText)
 			if lPos > 0 then
 				lText = lText[lPos + 1 .. $]
 			end if
 		end if
+		if pBookMark[2] < 3 then
+			for i = pBookMark[2] to length(bm_level_names) do
+				bm_level_names[i] = lText
+			end for
+		else
+			for i = pBookMark[2] to length(bm_level_names) do
+				bm_level_names[i] = bm_level_names[3]
+			end for
+		end if
 	end if
 	
-	return lText
+	
+	if pBookMark[2] > 1 then
+		lDisplayText = lText & " (" & bm_level_names[pBookMark[2] - 1] & ")"
+	else
+		lDisplayText = lText
+	end if
+	
+	-- Do a case-insensitive comparison
+	lSortText = lower(lText)
+	
+	
+	pBookMark = append(pBookMark, trim(lDisplayText))
+	pBookMark = append(pBookMark, trim(lSortText))
+	
+	return pBookMark
 end function
 
 -----------------------------------------------------------------
 function bmsort(sequence A, sequence B)
 -----------------------------------------------------------------
-	return compare(bmcleanup(A), bmcleanup(B))
+	return compare(A[$], B[$])
+end function
+
+
+
+-----------------------------------------------------------------
+function bmdivide(sequence pOrigList)
+-----------------------------------------------------------------
+	sequence lDividedList = {}
+	integer lFirstChar
+	integer lPrevSlot = 0
+
+	for i = 1 to length(pOrigList) do
+		if pOrigList[i][1] != 'h' then
+			continue
+		end if
+		
+		if pOrigList[i][2] > 4 then
+			continue
+		end if
+		
+		lFirstChar = pOrigList[i][$][1]
+		if not find(lFirstChar, "abcdefghijklmnopqrstuvwxyz") then
+			lFirstChar = '0'
+		end if
+		if lFirstChar != lPrevSlot then
+			lDividedList = append(lDividedList, {})
+			lPrevSlot = lFirstChar
+		end if
+		
+		lDividedList[$] = append(lDividedList[$], pOrigList[i])
+	end for
+		
+	return lDividedList
 end function
 
 -----------------------------------------------------------------
@@ -631,35 +691,88 @@ procedure Generate(sequence pFileName)
 	if vVerbose then
 		puts(1, "Generating: Index\n")
 	end if
-	lBookMarks = custom_sort( routine_id("bmsort"), creole_parse(Get_Bookmarks))
+
+	lBookMarks = creole_parse(Get_Bookmarks)
+	for i = 1 to length(lBookMarks) do
+		lBookMarks[i] = bmcleanup(lBookMarks[i])
+	end for
+	lBookMarks = custom_sort( routine_id("bmsort"), lBookMarks)
+	lBookMarks = bmdivide(lBookMarks)
+
 	fh = open(make_filename("index"), "w")
 	puts(fh, "<!DOCTYPE html \n" )
 	puts(fh, "  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" )
 	puts(fh, "  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" )
 	puts(fh, "\n" )
-	puts(fh, "<html>\n" )
+	puts(fh, "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n" )
 	puts(fh, "\n" )
 	puts(fh, "<head>\n" )
+	puts(fh, "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n" )
 	puts(fh, " <title>Index</title>\n" )
 	puts(fh, " <link rel=\"stylesheet\" media=\"screen, projection, print\" type=\"text/css\" href=\"style.css\"/>\n" )
 	puts(fh, "</head>\n" )
 	puts(fh, "<body>\n" )
+	puts(fh, "<h1>Subject and Routine Index</h1>\n" )
+	sequence entries
+	integer jj
+	
+	jj = 0
 	for i = 1 to length(lBookMarks) do
-		puts(fh, "<a href=\"")
-		puts(fh, make_filename(lBookMarks[i][6],"")) -- Containing file
-		puts(fh, "#")
-		puts(fh, lBookMarks[i][4]) -- Bookmark name
-		puts(fh, "\">")
-		if length(lBookMarks[i][3]) > 0 then
-			puts(fh, lBookMarks[i][3]) -- Display Text
-		else
-			puts(fh, lBookMarks[i][4])
+		jj += 1
+		if jj > 9 then
+			puts(fh, "<br />\n" )
+			jj = 1
 		end if
-		puts(fh, "</a><br />\n")
+		puts(fh, "&nbsp;&nbsp;&nbsp;<a href=\"#bm_" & lBookMarks[i][1][7][1] & "\"><strong>&nbsp;" &
+									upper(lBookMarks[i][1][7][1]) & "</strong>&nbsp;</a>&nbsp;&nbsp;&nbsp;")
 	end for
+	puts(fh, "<br /><br />\n" )
+	
+	entries = {}
+	for i = 1 to length(lBookMarks) do	
+		entries = append(entries, "<br />&nbsp;&nbsp;<a name=\"bm_" & lBookMarks[i][1][7][1] & "\"><strong>" &
+									upper(lBookMarks[i][1][7][1]) & "</strong></a>&nbsp;&nbsp;<br />")
+		for j = 1 to length(lBookMarks[i]) do
+			sequence lEntry
+			integer pos
+			sequence htmlentry
+
+			lEntry = lBookMarks[i][j]
+			htmlentry = "<a href=\""
+			if length(lEntry[6]) > 0 then
+				htmlentry &= make_filename(filebase(lEntry[6]),"") -- Containing file
+			else
+				htmlentry &= make_filename(filebase(lEntry[5]),"") -- Containing file
+			end if
+			htmlentry &= "#"
+			htmlentry &= lEntry[4] -- Bookmark name
+			htmlentry &= "\">"
+			htmlentry &= lEntry[7] -- cleaned up name
+			htmlentry &= "</a>"
+			entries = append(entries, htmlentry)
+		end for
+		
+	end for
+
+	puts(fh, "<table class=\"index\">\n")
+	jj = floor( (1 + length(entries)) / 2 )
+	for j = 1 to jj do
+		puts(fh, "<tr>\n")
+		puts(fh, "<td>")
+		puts(fh, entries[j])
+		puts(fh, "</td>\n")
+
+		if j + jj <= length(entries) then
+			puts(fh, "<td>")
+			puts(fh, entries[j + jj])
+			puts(fh, "</td>\n")
+		end if
+		puts(fh, "</tr>\n")
+	end for
+	puts(fh, "</table>")
 	puts(fh, "</body></html>\n")
 	close(fh)	
-	
+		
 end procedure
 
 -----------------------------------------------------------------
@@ -810,6 +923,7 @@ procedure main(sequence pArgs)
 				else
 					lValue = pArgs[lPos][3..$]
 				end if
+
 				vTemplateFile = lValue
 				
 			elsif pArgs[lPos][2] = 'l' then -- Heading Levels

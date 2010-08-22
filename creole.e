@@ -13,13 +13,10 @@ include std/math.e
 include std/map.e
 include std/types.e
 include std/sort.e
-include std/regex.e as re
 include std/map.e
 include std/filesys.e
-
 include euphoria/syncolor.e
 
-constant paren_end_re = re:new(`\([a-z0-9]+\)$`)
 
 object gDebug gDebug = 0
 global enum     -- Action Codes for the Generator
@@ -159,8 +156,6 @@ sequence vRawContext = ""
 sequence vStyle = {"default"}
 integer  vVerbose = 0
 
-object   re_URL4 = re:new(`/\W*(\w+)\.(\w+)\.(\w+)\.(\w+)\W*`)
-object   re_URL3 = re:new(`/\W*(\w+)\.(\w+)\.(\w+)\W*`)
 constant vHonorifics = {"mr", "mrs", "miss", "ms", "dr", "sir"}
 constant vTLD = {
 "aero","asia","biz","cat","com","coop","edu","gov","info","int",
@@ -316,6 +311,123 @@ procedure init()
 
 end procedure
 init()
+
+-- looks for a string of alphanumeric chars enclosed in parenthesis
+-- If found, returns a sequence {START, END}
+-- If not found, returns 0
+------------------------------------------------------------------------------
+function find_paren_end(sequence pText)
+------------------------------------------------------------------------------
+	integer lStart
+	integer lEnd
+
+	lStart = find('(', pText)
+	if lStart = 0 then
+		return 0
+	end if
+	
+	lEnd = find(')', pText, lStart + 1)
+	if lEnd = 0 then
+		return 0
+	end if
+	if not t_alnum( pText[lStart+1 .. lEnd - 1]) then
+		return 0
+	end if
+	
+	return {lStart, lEnd}
+end function
+
+-- looks for the end of the current word.
+-- If found, returns an integer with the index of the last character in the word.
+------------------------------------------------------------------------------
+function find_word(sequence pText, integer pStart = 1)
+------------------------------------------------------------------------------
+	for i = pStart to length(pText) do
+		if not t_alnum(pText[i]) then
+			return i - 1
+		end if
+	end for
+	
+	return length(pText)
+end function
+
+
+-- looks for common url formats: X.X.X and X.X.X.X
+-- If found, returns a sequence {{START, END}, {word1_start, word1_end}, ..., {wordn_start, wordn_end}}
+-- If not found, returns 0
+------------------------------------------------------------------------------
+function find_url(sequence pText, integer pStart)
+------------------------------------------------------------------------------
+
+	sequence lRes
+	integer lStart
+	integer lEnd
+	integer lPos
+	
+	if length(pText) - pStart < 7 then
+		-- The minimum length of any text to contain a valid URL is 7 characters.
+		return 0 
+	end if
+	
+	lPos = pStart - 1
+	
+	while lPos < length(pText) do
+		lRes = {{0,0}}
+		lStart = lPos
+		-- Find first white space, then skip over it.
+		for i = lPos + 1 to length(pText) do
+			if t_space(pText[i]) then
+				lPos = i
+				exit
+			end if
+		end for
+		if lPos = lStart then
+			lPos += 1
+		end if
+		for i = lPos to length(pText) do
+			if not t_space(pText[i]) then
+				lPos = i
+				exit
+			end if
+		end for
+		if lPos = lStart then
+			return 0
+		end if
+		
+		while length(lRes) < 5 do
+			lStart = lPos
+			lEnd = find_word(pText, lStart)
+	
+			if lEnd < lStart then
+				lEnd += 1
+				exit  -- Not at the start of a word
+			end if
+			
+			lRes = append(lRes, {lStart, lEnd})
+			lPos = lEnd + 2
+			
+			if lEnd = length(pText) then
+				exit -- Must be the last word 'cos we ran out of text.
+			end if
+			
+			if not equal(pText[lEnd + 1], '.') then
+				exit -- Found a terminating non-dot, so no more words.
+			end if
+			
+			
+		end while
+	
+		if length(lRes) < 4 or length(lRes) > 5 then
+			lPos = lEnd
+			continue
+		end if
+		
+		return lRes
+	end while
+	
+	return 0
+end function
+
 
 -- returns a string containing only characters in vNameChars and in pExtra.
 ------------------------------------------------------------------------------
@@ -2696,10 +2808,8 @@ function convert_url(sequence pText, object pMatch)
 
 		lResult = lResult[1 .. lFrom-1] & lURL & lResult[lTo+1 .. $]
 
-		pMatch = re:find(re_URL4, lResult)
-		if atom(pMatch) then
-			pMatch = re:find(re_URL3, lResult)
-		end if
+		pMatch = find_url(lResult, lFrom + 1)
+		
 		until atom(pMatch)
 	end loop
 
@@ -3174,10 +3284,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 
 			-- Check for short-form urls.
 			if eu:find('.', lText) then
-				lExtract = re:find(re_URL4, lText)
-				if atom(lExtract) then
-					lExtract = re:find(re_URL3, lText)
-				end if
+				lExtract = find_url(lText, 1)
 				if sequence(lExtract) then
 					lText = convert_url(lText, lExtract)
 				end if
@@ -3569,10 +3676,10 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 						object out
 						lExtract = get_to_eol(pRawText, lPos + 10)
 						vRawContext = lExtract[2]
-						out = re:find(paren_end_re, vRawContext)
+						out = find_paren_end(vRawContext)
 						if sequence(out) then
-							vCurrentNamespace = vRawContext[out[1][1]..out[1][2]] 
-							vRawContext = vRawContext[1..out[1][1]-1] & vRawContext[out[1][2]+1..$]
+							vCurrentNamespace = vRawContext[out[1] + 1 .. out[2] - 1] 
+							vRawContext = vRawContext[1..out[1]-1] & vRawContext[out[2]+1..$]
 						end if
 						vCurrentContext = cleanup(lExtract[2], "/\\.")
 						add_bookmark('a', vCurrentContext, cleanup(lExtract[2]))
