@@ -1,0 +1,21 @@
+[FORMHEAD]
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<title>Euphoria Index</title>
+<link rel="stylesheet" type="text/css" href="htmlindx.css" />
+<link rel="stylesheet" type="text/css" href="style.css" />
+
+
+[FOOTER]
+&copy; 2009 OpenEuphoria.org <br/>
+Generated on [{today}] using <i>htmlindx</i>
+
+[HEADER]
+<h1>Index for the Euphoria Language Documentation</h1>
+
+[DOCTYPE]
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+[DOCSTART]
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
