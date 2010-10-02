@@ -111,7 +111,7 @@ enum    -- Temporary embedded tags
 	TAG_ENDPARA,
 	TAG_UNRESOLVED
 
-constant kLeadIn = "=*/<{#[\n\\-|~!_:^,+`;>%@"
+constant kLeadIn = "=*/<{#[\n\\-|~!_:^,+`;>%@&"
 constant kDecorTag = "*/#_^,-+"
 constant kDecorAction = {
 			BoldText,       -- *
@@ -2873,13 +2873,16 @@ function get_table(sequence pRawText, atom pFrom)
 	integer lCI
 	sequence lRowText
 	sequence lNewLine
+	integer lTableLinecnt
 
+	
 	-- Collect all the table definition before outputing anything.
 	lHeaders = {}
 	lCells = {}
 	lPos = pFrom
 	lMode = 'H' -- assume horizontal, until proven otherwise.
 	lRow = 0
+	lTableLinecnt = 0
 
 	while length(lLine) > 0 with entry do
 		lText = ""
@@ -2901,14 +2904,16 @@ function get_table(sequence pRawText, atom pFrom)
 
 			if lCellType = '?' then
 				if lLine[lCI] = '=' or lLine[lCI] = '|' then
-					-- We might have a header.
-					if lMode = 'H' then
-						if length(lCells) = 0 or lColumn = 0 then
-							lHeadingLine = 1
-						end if
-					else
-						if lColumn = 1 then
-							lHeadingLine = 1
+					if lTableLinecnt = 1 then	-- Can only have a header on the first table definition line.
+						-- We might have a header.
+						if lMode = 'H' then
+							if length(lCells) = 0 or lColumn = 0 then
+								lHeadingLine = 1
+							end if
+						else
+							if lColumn = 1 then
+								lHeadingLine = 1
+							end if
 						end if
 					end if
 					if lHeadingLine then
@@ -2964,9 +2969,9 @@ function get_table(sequence pRawText, atom pFrom)
 							lCells[$] = append(lCells[$], lText)
 						else
 							lRow += 1
-							--if lRow > length(lCells) then
-							--  lCells = append(lCells, {})
-							--end if
+							if lRow > length(lCells) then
+								lCells = append(lCells, {})
+							end if
 							lCells[lRow] = append(lCells[lRow], lText)
 						end if
 					end if
@@ -2982,6 +2987,7 @@ function get_table(sequence pRawText, atom pFrom)
 		lNewLine = get_logical_line(pRawText, lPos, {"|"}, {"|"})
 		lLine = lNewLine[2]
 		lPos = lNewLine[1]
+		lTableLinecnt += 1
 
 		-- Append a bar if one not at end already.
 		if length(lLine) > 0 and lLine[$] != '|' then
@@ -3353,6 +3359,14 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 				end if
 				break
 
+			case '&' then   -- Non-breaking space?
+				if compare_next({"&"}, pRawText, lPos) > 0 then
+					lPos += 1
+					lText &= Generate_Final(NonBreakSpace,{})
+					lChar = -1
+				end if
+				break
+
 			case '~' then   -- Escape
 				if lPos < length(pRawText) then
 					lChar = pRawText[lPos + 1]
@@ -3406,7 +3420,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 				if pSpan = 0 then
 					sequence temps
 					temps = pRawText[lPos .. lPos + 3]
-					if compare_next({"\n", `\\`, ` \\`, " \n"}, pRawText, lPos+1) > 0 then
+					if compare_next({"\n", `\\`, ` \\`, " \n"}, pRawText, lPos) > 0 then
 						-- Reduce indentation
 						lText = Generate_Final(EndIndent, {})
 						lIndentLevel -= 1
