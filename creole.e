@@ -2903,36 +2903,14 @@ function get_table(sequence pRawText, atom pFrom)
 			end if
 
 			if lCellType = '?' then
-				if lLine[lCI] = '=' or lLine[lCI] = '|' then
-					if lTableLinecnt = 1 then	-- Can only have a header on the first table definition line.
-						-- We might have a header.
-						if lMode = 'H' then
-							if length(lCells) = 0 or lColumn = 0 then
-								lHeadingLine = 1
-							end if
-						else
-							if lColumn = 1 then
-								lHeadingLine = 1
-							end if
-						end if
-					end if
-					if lHeadingLine then
-						lCellType = 'h'
-						if length(lHeaders) > 0 then
-							if length(lCells) > 0 then
-								lMode = 'V' -- Now in vertical mode
-								lColumn = 0
-								lRow = 0
-							end if
-						end if
-					else
-						-- just a normal cell
-						lCellType = 'c'
-						if lLine[lCI] = '=' then
-							lText &= lLine[lCI]
-						else
-							-- empty cell, so reprocess the cell end bar
-							lCI -= 1
+				if lLine[lCI] = '=' or (lLine[lCI] = '|' and lTableLinecnt = 1) then	-- Can only have a header on the first table definition line.
+					lHeadingLine = 1
+					lCellType = 'h'
+					if length(lHeaders) > 0 then
+						if length(lCells) > 0 then
+							lMode = 'V' -- Now in vertical mode
+							lColumn = 0
+							lRow = 0
 						end if
 					end if
 				else
@@ -2949,7 +2927,7 @@ function get_table(sequence pRawText, atom pFrom)
 					else
 						-- We have a cell
 						lCellType = 'c'
-						lText &= lLine[lCI]
+						lCI -= 1
 					end if
 				end if
 			else
@@ -2986,14 +2964,18 @@ function get_table(sequence pRawText, atom pFrom)
 	 entry  -- << loop entry point -------
 		lNewLine = get_logical_line(pRawText, lPos, {"|"}, {"|"})
 		lLine = lNewLine[2]
-		lPos = lNewLine[1]
-		lTableLinecnt += 1
-
-		-- Append a bar if one not at end already.
-		if length(lLine) > 0 and lLine[$] != '|' then
-			lLine &= '|'
+		if length(lLine) > 0 and lLine[1] != '|' then
+			-- new line doesn't start with a bar, so end the current table.
+			lLine = ""
+		else
+			lPos = lNewLine[1]
+			lTableLinecnt += 1
+	
+			-- Append a bar if one not at end already.
+			if length(lLine) > 0 and lLine[$] != '|' then
+				lLine &= '|'
+			end if
 		end if
-
 	end while
 
 	-- Generate final for the table now.
