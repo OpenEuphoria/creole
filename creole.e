@@ -2353,6 +2353,7 @@ function get_link(sequence pRawText, atom pFrom)
 	end if
 
 	if length(lURL) > 0 then
+		lURL = Generate_Final(Sanitize, lURL)	
 		lPos = eu:find(':', lURL) + begins('/', lURL)
 		if lPos = 0 then
 			
