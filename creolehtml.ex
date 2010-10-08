@@ -365,7 +365,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 								"#" & lHeadings[i][3] & "\">" &
 								lHeadings[i][2] & "</a></div>\n"
 				end for
-				
+				lHTMLText &= "</div>\n"
 				lHTMLText &= "</div>"
 				break
 			
