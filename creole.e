@@ -3076,7 +3076,6 @@ global function process_macros(sequence pRawText, sequence pRecurse)
 end function
 vMacro_Processor_rid = routine_id("process_macros")
 
-
 ------------------------
 function update_paragraphs(sequence pText)
 ------------------------
@@ -3115,7 +3114,7 @@ function update_paragraphs(sequence pText)
 		return pText
 	end if
 
-	lUpdatedText = repeat(0, length(pText) +
+	lUpdatedText = repeat(' ', length(pText) +
 							 lStartLen * lSourcePos +
 							 lEndLen  * lTargetPos
 							 )
@@ -3204,7 +3203,7 @@ function update_paragraphs(sequence pText)
 	end while
 
 	while lDepth > 0 do
-		lUpdatedText &= repeat(0, length(lParaEnd))
+		lUpdatedText &= repeat(' ', length(lParaEnd))
 		lTempPos = lTargetPos + lEndLen
 		lUpdatedText[lTargetPos .. lTempPos] = lParaEnd
 		lTargetPos = lTempPos
@@ -4158,7 +4157,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 		if vVerbose then
 			puts(1, "Processing plugins.\n")
 		end if
-		lPluginResult = repeat(0, length(vPluginList))
+		lPluginResult = repeat(' ', length(vPluginList))
 		integer lPluginLength = 0
 
 		for i = 1 to length(vPluginList) do
