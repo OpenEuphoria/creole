@@ -334,8 +334,9 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 		end if
 		switch lParms[1][2] do
 			case "TOC" then
-				lHTMLText = "<div class=\"TOC\">"
+				
 				lValue = {0,2}
+				sequence lStartDepth = { 0, 0 }
 				lSpacer = ""
 				for i = 2 to length(lParms) do
 					if equal(lParms[i][1], "heading") then
@@ -349,25 +350,16 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 						end if
 					elsif equal(lParms[i][1], "spacer") then
 						lSpacer = search:match_replace("^", lParms[i][2], " ")
+					
+					elsif equal(lParms[i][1], "start") then
+						lStartDepth = value(lParms[i][2])
+						if lStartDepth[1] != GET_SUCCESS then
+							lStartDepth[2] = 0
+						end if
 					end if
 				end for
 				
-				lHeadings = creole_parse(Get_Headings, , lValue[2])
-				lHTMLText &= "<div class=\"TOCBody\">"
-				for i = 1 to length(lHeadings) do
-					lHTMLText &= "<div class=\"toc_" & sprint(lHeadings[i][1]) & "\">"
-					if length(lSpacer) > 0 then
-						for j = 2 to lHeadings[i][1] do
-							lHTMLText &= lSpacer
-						end for
-					end if
-					lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5],"") & 
-								"#" & lHeadings[i][3] & "\">" &
-								lHeadings[i][2] & "</a></div>\n"
-				end for
-				lHTMLText &= "</div>\n"
-				lHTMLText &= "</div>"
-				break
+				lHTMLText = buildTOC( 0, 1, {} )
 			
 			case "NAV" then
 				lHere = creole_parse(Get_CurrentHeading, , lInstance)
@@ -408,40 +400,33 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 			
 			case "LEVELTOC" then
 				
-				lDepth = 1
+				integer lLevel = 1
+				lDepth = 4
+				
 				for i = 2 to length(lParms) do
 					if equal(lParms[i][1], "depth") then
 						lValue = value(lParms[i][2])
 						if lValue[1] = GET_SUCCESS then
 							lDepth = max({1,lValue[2]})
 						end if
+						
+					elsif equal(lParms[i][1], "level") then
+						lValue = value(lParms[i][2])
+						if lValue[1] = GET_SUCCESS then
+							lLevel = max({1,lValue[2]})
+						end if
 					end if
 				end for
-				lHere = creole_parse(Get_CurrentHeading, ,lInstance)
-
-				lHeadings = creole_parse(Get_Headings, , lHere[1] + lDepth)
-				
-				lHTMLText = ""
-				lPos = find(lHere, lHeadings)
-				
-				lIdx = lPos + 1
-				while lIdx <= length(lHeadings) do
-					if lHeadings[lIdx][1] = lHere[1] then
-						exit
-					end if
-					if lHeadings[lIdx][1] > lHere[1] then
-						lHTMLText &= "<div class=\"toc_" & sprint(lHeadings[lIdx][1]) & "\">"
-						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
-									"#" & lHeadings[lIdx][3] & "\">" &
-									lHeadings[lIdx][2] & "</a></div>\n"
-					end if
-					lIdx += 1
-				end while				
-				
-				if length(lHTMLText) > 0 then
-					lHTMLText = "<div class=\"LEVELTOC\">\n" & lHTMLText & "</div>\n"
-				end if
-			break
+				integer lDelim = -1
+				integer lIx
+				while lIx with entry do
+					pParms[1][lIx] = 32
+					lDelim -= 1
+				entry
+					lIx = find( lDelim, pParms[1] )
+				end while
+				lHere = creole_parse(Get_CurrentLevels, , {pParms[4], lLevel} )
+				lHTMLText = buildTOC( lLevel, lDepth, lHere )
 			
 			case "FONT" then
 				lFontColor = ""
@@ -479,6 +464,9 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				
 				break
 			
+			case "INDEX" then
+				lHTMLText = buildIndex()
+				
 			case else
 				lHTMLText = html_generator(pAction, pParms)
 			break
@@ -504,6 +492,139 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 end function
 
 sequence bm_level_names = repeat("", 6)
+
+function showTOC( sequence pContext, integer pLevel, integer pDepth, sequence pHeadings )
+	-- check to see if we should be showing the TOC link for this heading
+	if length( pContext ) < pLevel then
+		return 0
+	end if
+	
+	if pDepth > length(pContext) then
+		pDepth = length(pContext)
+	end if
+	
+	if pDepth > length(pHeadings) then
+		pDepth = length(pHeadings)
+	end if
+	
+	for i = 1 to pDepth do
+		if pContext[i] != pHeadings[i] then
+			return 0
+		end if
+	end for
+	
+	return 1
+end function
+
+function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpacer = "" )
+	sequence lHeadings = creole_parse(Get_Headings, , pDepth )
+	sequence lHTMLText = "<div class=\"TOC\">\n<div class=\"TOCBody\">"
+	sequence lHeadingContext = {}
+	for i = 1 to length(lHeadings) do
+		sequence lHeading = lHeadings[i]
+		integer lHeadingDepth = lHeading[1]
+		if lHeadingDepth < length( lHeadingContext ) then
+			lHeadingContext = lHeadingContext[1..lHeadingDepth]
+			
+		elsif lHeadingDepth > length( lHeadingContext ) then
+			lHeadingContext &= repeat( 0, lHeadingDepth - length( lHeadingContext ) )
+			
+		end if
+		lHeadingContext[lHeadingDepth] += 1
+		
+		if showTOC( pHere, pLevel, pDepth, lHeadingContext ) then
+		
+			lHTMLText &= "<div class=\"toc_" & sprint(lHeadings[i][1]) & "\">"
+			if length(pSpacer) > 0 then
+				for j = 2 to lHeadings[i][1] do
+					lHTMLText &= pSpacer
+				end for
+			end if
+			lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5],"") & 
+						"#" & lHeadings[i][3] & "\">" &
+						lHeadings[i][2] & "</a></div>\n"
+			
+		end if
+	end for
+	lHTMLText &= "</div>\n"
+	lHTMLText &= "</div>\n"
+	return lHTMLText
+end function
+
+function buildIndex()
+-- Create Index file
+	sequence lHtml = ""
+	if vVerbose then
+		puts(1, "Generating: Index\n")
+	end if
+
+	sequence lBookMarks = creole_parse(Get_Bookmarks)
+	for i = 1 to length(lBookMarks) do
+		lBookMarks[i] = bmcleanup(lBookMarks[i])
+	end for
+	lBookMarks = custom_sort( routine_id("bmsort"), lBookMarks)
+	lBookMarks = bmdivide(lBookMarks)
+
+	lHtml &= "<h1>Subject and Routine Index</h1>\n" 
+	sequence entries
+	integer jj
+	
+	jj = 0
+	for i = 1 to length(lBookMarks) do
+		jj += 1
+		if jj > 9 then
+			lHtml &= "<br />\n" 
+			jj = 1
+		end if
+		lHtml &= "&nbsp;&nbsp;&nbsp;<a href=\"#bm_" & lBookMarks[i][1][7][1] & "\"><strong>&nbsp;" &
+									upper(lBookMarks[i][1][7][1]) & "</strong>&nbsp;</a>&nbsp;&nbsp;&nbsp;"
+	end for
+	lHtml &= "<br /><br />\n" 
+	
+	entries = {}
+	for i = 1 to length(lBookMarks) do	
+		entries = append(entries, "<br />&nbsp;&nbsp;<a name=\"bm_" & lBookMarks[i][1][7][1] & "\"><strong>" &
+									upper(lBookMarks[i][1][7][1]) & "</strong></a>&nbsp;&nbsp;<br />")
+		for j = 1 to length(lBookMarks[i]) do
+			sequence lEntry
+			integer pos
+			sequence htmlentry
+
+			lEntry = lBookMarks[i][j]
+			htmlentry = "<a href=\""
+			if length(lEntry[6]) > 0 then
+				htmlentry &= make_filename(filebase(lEntry[6]),"") -- Containing file
+			else
+				htmlentry &= make_filename(filebase(lEntry[5]),"") -- Containing file
+			end if
+			htmlentry &= "#"
+			htmlentry &= lEntry[4] -- Bookmark name
+			htmlentry &= "\">"
+			htmlentry &= lEntry[7] -- cleaned up name
+			htmlentry &= "</a>"
+			entries = append(entries, htmlentry)
+		end for
+		
+	end for
+
+	lHtml &= "<table class=\"index\">\n"
+	jj = floor( (1 + length(entries)) / 2 )
+	for j = 1 to jj do
+		lHtml &= "<tr>\n"
+		lHtml &= "<td>"
+		lHtml &= entries[j]
+		lHtml &= "</td>\n"
+
+		if j + jj <= length(entries) then
+			lHtml &= "<td>"
+			lHtml &= entries[j + jj]
+			lHtml &= "</td>\n"
+		end if
+		lHtml &= "</tr>\n"
+	end for
+	lHtml &= "</table>"
+	return lHtml
+end function
 
 -----------------------------------------------------------------
 function bmcleanup(sequence pBookMark)
@@ -699,80 +820,6 @@ procedure Generate(sequence pFileName)
 	lBookMarks = custom_sort( routine_id("bmsort"), lBookMarks)
 	lBookMarks = bmdivide(lBookMarks)
 
-	fh = open(make_filename("index"), "w")
-	puts(fh, "<!DOCTYPE html \n" )
-	puts(fh, "  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" )
-	puts(fh, "  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" )
-	puts(fh, "\n" )
-	puts(fh, "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n" )
-	puts(fh, "\n" )
-	puts(fh, "<head>\n" )
-	puts(fh, "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n" )
-	puts(fh, " <title>Index</title>\n" )
-	puts(fh, " <link rel=\"stylesheet\" media=\"screen, projection, print\" type=\"text/css\" href=\"style.css\"/>\n" )
-	puts(fh, "</head>\n" )
-	puts(fh, "<body>\n" )
-	puts(fh, "<h1>Subject and Routine Index</h1>\n" )
-	sequence entries
-	integer jj
-	
-	jj = 0
-	for i = 1 to length(lBookMarks) do
-		jj += 1
-		if jj > 9 then
-			puts(fh, "<br />\n" )
-			jj = 1
-		end if
-		puts(fh, "&nbsp;&nbsp;&nbsp;<a href=\"#bm_" & lBookMarks[i][1][7][1] & "\"><strong>&nbsp;" &
-									upper(lBookMarks[i][1][7][1]) & "</strong>&nbsp;</a>&nbsp;&nbsp;&nbsp;")
-	end for
-	puts(fh, "<br /><br />\n" )
-	
-	entries = {}
-	for i = 1 to length(lBookMarks) do	
-		entries = append(entries, "<br />&nbsp;&nbsp;<a name=\"bm_" & lBookMarks[i][1][7][1] & "\"><strong>" &
-									upper(lBookMarks[i][1][7][1]) & "</strong></a>&nbsp;&nbsp;<br />")
-		for j = 1 to length(lBookMarks[i]) do
-			sequence lEntry
-			integer pos
-			sequence htmlentry
-
-			lEntry = lBookMarks[i][j]
-			htmlentry = "<a href=\""
-			if length(lEntry[6]) > 0 then
-				htmlentry &= make_filename(filebase(lEntry[6]),"") -- Containing file
-			else
-				htmlentry &= make_filename(filebase(lEntry[5]),"") -- Containing file
-			end if
-			htmlentry &= "#"
-			htmlentry &= lEntry[4] -- Bookmark name
-			htmlentry &= "\">"
-			htmlentry &= lEntry[7] -- cleaned up name
-			htmlentry &= "</a>"
-			entries = append(entries, htmlentry)
-		end for
-		
-	end for
-
-	puts(fh, "<table class=\"index\">\n")
-	jj = floor( (1 + length(entries)) / 2 )
-	for j = 1 to jj do
-		puts(fh, "<tr>\n")
-		puts(fh, "<td>")
-		puts(fh, entries[j])
-		puts(fh, "</td>\n")
-
-		if j + jj <= length(entries) then
-			puts(fh, "<td>")
-			puts(fh, entries[j + jj])
-			puts(fh, "</td>\n")
-		end if
-		puts(fh, "</tr>\n")
-	end for
-	puts(fh, "</table>")
-	puts(fh, "</body></html>\n")
-	close(fh)	
-		
 end procedure
 
 -----------------------------------------------------------------

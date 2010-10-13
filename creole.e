@@ -72,6 +72,7 @@ global enum     -- Action Codes for the Generator
 global enum     -- Action Codes for the Creole
 	Get_Headings,       -- returns all the headings and their bookmarks
 	Get_CurrentHeading, -- returns the heading last processed and its bookmark
+	Get_CurrentLevels,  -- returns a sequence of the current heading level
 	Get_Macro,          -- returns the requested macro's definition
 	Get_Bookmarks,      -- returns all the known bookmarks
 	Get_Elements,       -- returns all the known elements
@@ -1623,7 +1624,7 @@ function get_heading(sequence pRawText, atom pFrom)
 
 	vHeadings = append(vHeadings, {lLevel, lNums & lText})
 	lBookMark = sprintf("_%d_%s", {length(vBookMarks), cleanup(lText)})
-
+	
 	lText = Generate_Final(Comment, vRawContext) &
 	        Generate_Final(Bookmark, lBookMark) &
 	        Generate_Final(Heading, {lLevel, lNums & lText})
@@ -3731,6 +3732,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 end function
 
 vParser_rid = routine_id("parse_text")
+
 --------------------------------------------------------------------------------
 global function creole_parse(object pRawText, object pFinalForm_Generator = -1, object pContext = "")
 --------------------------------------------------------------------------------
@@ -3766,6 +3768,32 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 				end for
 				break
 
+			case Get_CurrentLevels then
+				if length(pContext) then
+					integer lEx = pContext[1]
+					integer lDepth = pContext[2]
+					sequence lHeading
+					for j = lEx to 1 by -1 do
+						if vElements[j][1] = 'b' then
+							lIdx = vElements[j][2]
+							if vBookMarks[lIdx][1] = 'h' then
+								lHdIdx = vBookMarks[lIdx][2]
+								lHeading = vHeadings[lHdIdx]
+								lText = split( lHeading[2], ' ')
+								lText = split( lText[1], '.' )
+								for k = 1 to length( lText ) do
+									lText[k] = value( lText[k] )
+									lText[k] = lText[k][2]
+								end for
+								if lDepth = length( lText ) then
+									exit
+								end if
+							end if
+						end if
+					end for
+					
+				end if
+				
 			case Get_CurrentHeading then
 					-- This returns the heading immediately prior to 'element'
 					-- supplied in the 'pContext' parameter.
