@@ -57,6 +57,7 @@ Available Plugins:
 
 FONT
 INDEX          Generates a linked index of headers in the document
+    search     A "js/search.js" file will be generated to search for headers
 NAV
 LEVELTOC
     level      The starting level of headers to display

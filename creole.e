@@ -221,7 +221,7 @@ sequence vPluginList = {}
 --            [6] = Pointer to the Element sequence for this bookmark.
 --            [7] = The name cleaned up for finding purposes
 sequence vBookMarks = {}
-enum
+export enum
 	BM_TYPE,
 	BM_POINTER,
 	BM_NAME,
@@ -240,7 +240,7 @@ enum
 sequence vHeadings = {}
 sequence vHeadingBMIndex = {}
 
-enum 
+export enum 
 	H_DEPTH,
 	H_TEXT
 
@@ -3785,7 +3785,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 									lText[k] = value( lText[k] )
 									lText[k] = lText[k][2]
 								end for
-								if lDepth = length( lText ) then
+								if lDepth < 0 or lDepth = length( lText ) then
 									exit
 								end if
 							end if

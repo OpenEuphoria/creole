@@ -1,3 +1,4 @@
+
 include creole.e
 include std/text.e
 include std/search.e as search
@@ -8,6 +9,11 @@ include std/get.e
 include std/datetime.e
 include std/math.e
 include std/error.e
+include std/sequence.e
+include std/map.e
+include std/pretty.e
+sequence JSON_OPTS = PRETTY_DEFAULT
+JSON_OPTS[DISPLAY_ASCII] = 3
 
 include kanarie.e as kan
 
@@ -28,6 +34,7 @@ sequence KnownWikis
 
 atom vStartTime = time()
 sequence vPublishedDate
+sequence vQuickLink = {}
 
 KnownWikis  = {}
 KnownWikis &= {{"WIKICREOLE",	"http://wikicreole.org/wiki/"}}
@@ -38,7 +45,7 @@ KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/euwiki.cgi?"}}
 -----------------------------------------------------------------
 function fixup_seps(sequence pFileName)
 -----------------------------------------------------------------
-ifdef WIN32 then
+ifdef WINDOWS then
 	return search:match_replace('/', pFileName, SLASH)
 elsedef
 	return search:match_replace('\\', pFileName, SLASH)
@@ -293,6 +300,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				kan:setValue(lData, "home", make_filename(lHomeFile,""))
 				kan:setValue(lData, "toc", make_filename(lTOCFile,""))
 				kan:setValue(lData, "publishedon", vPublishedDate)
+				kan:setValue(lData, "quicklink", join( vQuickLink, "\n" ) )
 				lHeadings = kan:loadTemplateFromFile(vTemplateFile)
 
 				if atom(lHeadings) then
@@ -399,7 +407,6 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				break
 			
 			case "LEVELTOC" then
-				
 				integer lLevel = 1
 				lDepth = 4
 				
@@ -465,7 +472,13 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				break
 			
 			case "INDEX" then
-				lHTMLText = buildIndex()
+				lHTMLText = buildIndex( lParms )
+			
+			case "QUICKLINK" then
+				lHTMLText = sprintf("<a name=\"ql%d\"/>\n", { length(vQuickLink)} )
+				lHere = creole_parse(Get_CurrentHeading, , lInstance )
+				vQuickLink = append( vQuickLink, 
+					sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
 				
 			case else
 				lHTMLText = html_generator(pAction, pParms)
@@ -551,8 +564,18 @@ function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpa
 	return lHTMLText
 end function
 
-function buildIndex()
+function buildIndex( sequence pParms )
 -- Create Index file
+	integer lGenerateSearch = 0
+	integer px = 1
+	while px <= length( pParms ) do
+		-- parse the arguments for the plugin
+		if equal( pParms[px][2], "search" ) then
+			lGenerateSearch = 1
+		end if
+		px += 1
+	end while
+	
 	sequence lHtml = ""
 	if vVerbose then
 		puts(1, "Generating: Index\n")
@@ -581,7 +604,11 @@ function buildIndex()
 	end for
 	lHtml &= "<br /><br />\n" 
 	
+	map:map lSearchMap = map:new()
+	
 	entries = {}
+	sequence lSplitName = ""
+	integer lSplitLength = -1
 	for i = 1 to length(lBookMarks) do	
 		entries = append(entries, "<br />&nbsp;&nbsp;<a name=\"bm_" & lBookMarks[i][1][7][1] & "\"><strong>" &
 									upper(lBookMarks[i][1][7][1]) & "</strong></a>&nbsp;&nbsp;<br />")
@@ -591,18 +618,33 @@ function buildIndex()
 			sequence htmlentry
 
 			lEntry = lBookMarks[i][j]
-			htmlentry = "<a href=\""
-			if length(lEntry[6]) > 0 then
-				htmlentry &= make_filename(filebase(lEntry[6]),"") -- Containing file
-			else
-				htmlentry &= make_filename(filebase(lEntry[5]),"") -- Containing file
-			end if
-			htmlentry &= "#"
-			htmlentry &= lEntry[4] -- Bookmark name
+			htmlentry = "<a href=\"" 
+			sequence href = indexEntryHref( lEntry )
+			htmlentry &= href
 			htmlentry &= "\">"
 			htmlentry &= lEntry[7] -- cleaned up name
 			htmlentry &= "</a>"
 			entries = append(entries, htmlentry)
+			
+			if lGenerateSearch then
+				integer ix = find( '(', lEntry[7] )
+				if ix then
+					if lSplitLength = -1 then
+						lSplitLength = find('_', href)
+						lSplitName = href[1..lSplitLength]
+						
+					end if
+					map:put( 
+							lSearchMap, 
+							pretty_sprint( lEntry[7][1..ix-2], JSON_OPTS ), 
+							{ 
+								href[lSplitLength+1..lSplitLength+4], 
+								href[lSplitLength+11..$], 
+								pretty_sprint( lEntry[7][ix+1..$-1], JSON_OPTS)
+							}, 
+							map:APPEND )
+				end if
+			end if
 		end for
 		
 	end for
@@ -623,7 +665,79 @@ function buildIndex()
 		lHtml &= "</tr>\n"
 	end for
 	lHtml &= "</table>"
+	
+	if lGenerateSearch then
+		-- create JSON
+		sequence lWords = map:keys( lSearchMap )
+		sequence lSearchData = sprintf("var base='%s';\nvar index={\n", {lSplitName})
+		integer wx = 1
+		while wx <= length(lWords) with entry do
+			lSearchData &= ",\n"
+		entry
+			lSearchData &= jsonWord( lWords[wx], map:get( lSearchMap, lWords[wx] ) )
+			wx += 1
+		end while
+		lSearchData &= "};\n"
+		
+		create_directory( sprintf("%s%sjs", { vOutDir, SLASH }) )
+		atom js = open( sprintf("%s%sjs%ssearch.js", { vOutDir, SLASH, SLASH } ), "w", 1 )
+		puts( js, lSearchData ) 
+		puts( js, SEARCH_JS )
+	end if
+	
 	return lHtml
+end function
+constant SEARCH_JS = `
+function search(frm) {
+    var m = index[frm.value];
+    var list = '';
+    list = frm.value + ':'
+
+    if ( m == undefined ) {
+        list += '<font color=#FF0000>not found!</font>';
+    } 
+    else {
+		list += '<ul>';
+		for( var ix = 0; ix <  m.length; ++ix ){
+			var r = m[ix];
+			list += '<li>';
+			list += "<a href=" + base + r[0] + ".html#" + r[1] + ">";
+			list += r[2] + ": " + frm.value;
+			list += '</a></li>';
+		}
+		list += '</ul>';
+    }
+    document.getElementById('searchresults').innerHTML = list; 
+
+    return false;    
+}
+
+`
+
+function indexEntryHref( sequence pBookMark )
+	sequence htmlentry = ""
+	if length(pBookMark[6]) > 0 then
+		htmlentry &= make_filename(filebase(pBookMark[6]),"") -- Containing file
+	else
+		htmlentry &= make_filename(filebase(pBookMark[5]),"") -- Containing file
+	end if
+	htmlentry &= "#"
+	htmlentry &= pBookMark[4] -- Bookmark name
+	return htmlentry
+end function
+
+function jsonWord( sequence pWord, sequence pSections )
+	-- "word":{"section 1":"link",...}
+	sequence json = sprintf(`%s:[`, {pWord} )
+	integer ix = 1
+	while ix <= length( pSections ) with entry do
+		json &= ','
+	entry
+		json &= sprintf( `["%s","%s",%s]`, pSections[ix] )
+		ix += 1
+	end while
+	json &= "]"
+	return json
 end function
 
 -----------------------------------------------------------------
