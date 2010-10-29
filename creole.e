@@ -1886,6 +1886,8 @@ function get_eucode(sequence pRawText, atom pFrom)
 	object lPattern
 	integer leadline
 
+	syncolor:reset()
+
 	pFrom += length("<eucode>")
 
 	lFinal = eu:match("</eucode>", pRawText, pFrom)
