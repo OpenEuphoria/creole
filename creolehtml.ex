@@ -40,7 +40,7 @@ KnownWikis  = {}
 KnownWikis &= {{"WIKICREOLE",	"http://wikicreole.org/wiki/"}}
 KnownWikis &= {{"OHANA",		"http://wikiohana.net/cgi-bin/wiki.pl/"}}
 KnownWikis &= {{"WIKIPEDIA",	"http://wikipedia.org/"}}
-KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/euwiki.cgi?"}}
+KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/view.wc?page="}}
 
 -----------------------------------------------------------------
 function fixup_seps(sequence pFileName)
