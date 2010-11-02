@@ -41,6 +41,7 @@ KnownWikis &= {{"WIKICREOLE",	"http://wikicreole.org/wiki/"}}
 KnownWikis &= {{"OHANA",		"http://wikiohana.net/cgi-bin/wiki.pl/"}}
 KnownWikis &= {{"WIKIPEDIA",	"http://wikipedia.org/wiki/"}}
 KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/view.wc?page="}}
+KnownWikis &= {{"WIKI",         "http://openeuphoria.org/wiki/view.wc?page="}}
 
 -----------------------------------------------------------------
 function fixup_seps(sequence pFileName)
