@@ -14,7 +14,7 @@ all : .SYMBOLIC build\creolehtml.exe
 build\main-.c build\creolehtml.mak : creolehtml.ex $(CREOLEHTML)
 	-mkdir build
 	cd build
-	euc -makefile-full -con ..\creolehtml.ex
+	euc -makefile -con ..\creolehtml.ex
 	cd ..
 
 build\creolehtml.exe : build\main-.c build\creolehtml.mak

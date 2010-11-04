@@ -13,7 +13,7 @@ all : build/creolehtml
 
 build/main-.c build/creolehtml.mak : creolehtml.ex creole.e $(CREOLE)
 	-mkdir build
-	cd build && euc -makefile-full ../creolehtml.ex
+	cd build && euc -makefile ../creolehtml.ex
 
 build/creolehtml : build/main-.c build/creolehtml.mak
 	 $(MAKE) -C build -f creolehtml.mak
