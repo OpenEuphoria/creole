@@ -1,3 +1,4 @@
+#!/usr/bin/env eui
 
 include creole.e
 include std/text.e
