@@ -3551,7 +3551,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 					end if
 
 					-- Look forwards to see if only spaces or/and dashes follow this on the same line.
-					if not has_trailing_chars(pRawText, lPos + 4, " \t-") then
+					if not has_trailing_chars(pRawText, lPos + 3, " \t-") then
 						break "Tagger"
 					end if
 
