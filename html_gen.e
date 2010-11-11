@@ -82,7 +82,11 @@ global function html_generator(integer pAction, sequence pParms, object pContext
 			lHTMLText = "\n<div class=\"" & pParms[1] & "\">" & pParms[2] & "</div>\n"
 
 		case Bookmark then
-			lHTMLText = "<a name=\"" & pParms & "\" ></a>"
+			lHTMLText = sprintf(`<a name="%s"></a>`, { pParms })
+			lPos = find('_', pParms, 2) -- skip first _
+			if lPos > 0 then
+				lHTMLText = sprintf(`%s<a name="%s"></a>`, { lHTMLText, pParms[lPos+1..$] })
+			end if
 
 		case OrderedList then
 			lHTMLText = "<ol>" & pParms & "</ol>"
