@@ -19,6 +19,10 @@ JSON_OPTS[DISPLAY_ASCII] = 3
 include kanarie.e as kan
 
 include html_gen.e
+-- Increment version number with each release, not really with each change
+-- in the SCM
+
+constant APP_VERSION = "1.0.0"
 
 --sequence vDefaultExt
 integer vVerbose = 0
@@ -611,6 +615,7 @@ function buildIndex( sequence pParms )
 	entries = {}
 	sequence lSplitName = ""
 	integer lSplitLength = -1
+
 	for i = 1 to length(lBookMarks) do	
 		entries = append(entries, "<br />&nbsp;&nbsp;<a name=\"bm_" & lBookMarks[i][1][7][1] & "\"><strong>" &
 									upper(lBookMarks[i][1][7][1]) & "</strong></a>&nbsp;&nbsp;<br />")
@@ -630,18 +635,23 @@ function buildIndex( sequence pParms )
 			
 			if lGenerateSearch then
 				integer ix = find( '(', lEntry[7] )
+				integer sl
 				if ix then
 					if lSplitLength = -1 then
 						lSplitLength = find('_', href)
 						lSplitName = href[1..lSplitLength]
-						
+					end if
+					if lSplitLength + 11 > length(href) then
+						sl = length(href)
+					else
+						sl = lSplitLength + 11
 					end if
 					map:put( 
 							lSearchMap, 
 							pretty_sprint( lEntry[7][1..ix-2], JSON_OPTS ), 
 							{ 
 								href[lSplitLength+1..lSplitLength+4], 
-								href[lSplitLength+11..$], 
+								href[sl .. $], 
 								pretty_sprint( lEntry[7][ix+1..$-1], JSON_OPTS)
 							}, 
 							map:APPEND )
@@ -911,9 +921,17 @@ procedure Generate(sequence pFileName)
 			puts(fh, lOutText)
 			close(fh)
 		else
+			object knownfiles = map:new()
 			for i = 1 to length(lOutText) do
 				lOutFile = make_filename(lOutText[i][1])
-				fh = open(lOutFile, "w")
+				if map:has(knownfiles, lOutFile) then
+					-- I know this files, so append to it.
+					fh = open(lOutFile, "a")
+				else
+					-- I don't know this files, so create it.
+					fh = open(lOutFile, "w")
+					map:put(knownfiles, lOutFile, 1)
+				end if
 				if fh = -1 then
 					printf(STDERR, "Cannot open \'%s\' for writing.\n", {lOutFile})
 					abort(1)
@@ -989,6 +1007,12 @@ procedure main(sequence pArgs)
 	integer lDelimPos
 
 	vPublishedDate = sprintf("%s\n", {datetime:format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
+	
+	object base_options = map:load_map( locate_file("creolehtml.opts") )
+	if map(base_options) then
+		KnownWikis = map:get( base_options, "wikis", KnownWikis)
+	end if
+	
 	lPos = 3
 	lCount = length(pArgs)
 	while 1 do
@@ -1033,6 +1057,11 @@ procedure main(sequence pArgs)
 				lValue = creole_parse(Set_Macro, trim(lName), lDefn)
 				
 			elsif pArgs[lPos][2] = 'v' then -- Verbose
+				if length(pArgs[lPos]) = 2 then
+					-- show version.
+					printf(1, "CreoleHtml v%s\n", { APP_VERSION })
+					abort(0)
+				end if
 				if find(pArgs[lPos][3], "=:") > 0 then
 					lValue = pArgs[lPos][4..$]
 				else
@@ -1110,7 +1139,7 @@ procedure main(sequence pArgs)
 				
 			elsif equal( pArgs[lPos], "-htmldoc") then
 				use_span_for_color = 0
-				
+								
 			elsif pArgs[lPos][2] = '-' then -- Output directory
 				-- A comment so ignore it
 				

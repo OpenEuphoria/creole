@@ -137,7 +137,8 @@ integer  vAllowMacros = 0
 integer  vAllowCamelCase = 1
 sequence vAllowedDecorations = "*/#_^,-+"
 sequence vSplitName = "file"
-sequence vSplitFile = {}
+sequence vOutputFile = {}
+integer  vExplicitOutput = 0
 sequence vReparseHeading
 sequence vHostID
 sequence vProtocols
@@ -948,8 +949,8 @@ procedure add_bookmark(integer pType, object pTypeLink, sequence pText)
 
 	lElement_No = length(vElements) + 1
 	lBM_No = length(vBookMarks) + 1
-	if length(vSplitFile) > 0 then
-		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, vSplitFile[$], lElement_No, 0, 0, 0}
+	if length(vOutputFile) > 0 then
+		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, vOutputFile[$], lElement_No, 0, 0, 0}
 	else
 		lNewBM =  {pType, pTypeLink, pText, vCurrentContext, "", lElement_No, 0, 0, 0}
 	end if
@@ -1129,6 +1130,8 @@ function get_options(sequence pRawText, atom pFrom)
 	lEndPos = lText[1]
 
 	lKV = keyvalues(lText[2])
+	
+	lText = ""
 	for i = 1 to length(lKV) do
 		switch lower(lKV[i][1]) do
 			case "maxnumlevel" then
@@ -1136,27 +1139,21 @@ function get_options(sequence pRawText, atom pFrom)
 				if lValue[1] = GET_SUCCESS and floor(lValue[2]) >= 0 then
 					vMaxNumLevel = floor(lValue[2])
 				end if
-				break
 
 			case "uppercase" then
 				vUpperCase = lKV[i][2]
-				break
 
 			case "lowercase" then
 				vLowerCase = lKV[i][2]
-				break
 
 			case "digits" then
 				vDigits = lKV[i][2]
-				break
 
 			case "specialwordchars" then
 				vSpecialWordChars = lKV[i][2]
-				break
 
 			case "style" then
 				vStyle = append(vStyle,lKV[i][2])
-				break
 
 			case "codecolors" then
 				lValue = lKV[i][2]
@@ -1170,7 +1167,6 @@ function get_options(sequence pRawText, atom pFrom)
 						vCodeColors[lPos] = lValue[j][2]
 					end if
 				end for
-				break
 
 			case "protocols" then
 				vProtocols = upper(lKV[i][2])
@@ -1179,112 +1175,114 @@ function get_options(sequence pRawText, atom pFrom)
 						vProtocols[j] &= ':'
 					end if
 				end for
-				break
 
 			case "splitlevel" then
-				lValue = value(lKV[i][2])
-				if lValue[1] = GET_SUCCESS and floor(lValue[2]) >= 0 then
-					if vSplitLevel = 0 then
-						vSplitFile = append(vSplitFile, sprintf("%s_%04d", {vSplitName, length(vSplitFile)+1}))
+				if vExplicitOutput = 0 then
+					lValue = value(lKV[i][2])
+					if lValue[1] = GET_SUCCESS and floor(lValue[2]) >= 0 then
+						if vSplitLevel = 0 then
+							vOutputFile = append(vOutputFile, sprintf("%s_%04d", {vSplitName, length(vOutputFile)+1}))
+						end if
+						vSplitLevel = floor(lValue[2])
 					end if
-					vSplitLevel = floor(lValue[2])
 				end if
-				break
 
+			case "output" then
+				sequence tempfn = lKV[i][2]
+				vExplicitOutput = 1
+				if length(tempfn) > 0 then
+					tempfn = replace_all(tempfn, '/', '_') -- Unix style delim
+					tempfn = replace_all(tempfn, '\\', '_') -- Windows style delim
+					tempfn = replace_all(tempfn, '.', '_')
+					tempfn = replace_all(tempfn, '<', '_')
+					tempfn = replace_all(tempfn, '>', '_')
+					ifdef WINDOWS then
+							tempfn = replace_all(tempfn, '?', '_')
+							tempfn = replace_all(tempfn, '*', '_')
+							tempfn = replace_all(tempfn, ':', '_')
+					end ifdef
+					
+					vOutputFile = append(vOutputFile, tempfn)
+					if length(vOutputFile) > 1 then
+						lText = {TAG_ENDPARA, TAG_ENDFILE}
+					end if
+				end if
+											
 			case "splitname" then
-				vSplitName = lKV[i][2]
-				break
+				if vExplicitOutput = 0 then
+					vSplitName = lKV[i][2]
+				end if
 
 			case "disallow" then
 				for j = 1 to length(lKV[i][2]) do
 					switch lower(lKV[i][2][j]) do
 					case "bold" then
 						vAllowedDecorations = seq:remove_all('*', vAllowedDecorations)
-						break
 
 					case "italic" then
 						vAllowedDecorations = seq:remove_all('/', vAllowedDecorations)
-						break
 
 					case "monospace" then
 						vAllowedDecorations = seq:remove_all('#', vAllowedDecorations)
-						break
 
 					case "underline" then
 						vAllowedDecorations = seq:remove_all('_', vAllowedDecorations)
-						break
 
 					case "superscript" then
 						vAllowedDecorations = seq:remove_all('^', vAllowedDecorations)
-						break
 
 					case "subscript" then
 						vAllowedDecorations = seq:remove_all(',', vAllowedDecorations)
-						break
 
 					case "strikethru" then
 						vAllowedDecorations = seq:remove_all('-', vAllowedDecorations)
-						break
 
 					case "insert" then
 						vAllowedDecorations = seq:remove_all('+', vAllowedDecorations)
-						break
 
 					case "camelcase" then
 						vAllowCamelCase = 0
-						break
 
 					end switch
 				end for
-				break
 
 			case "allow" then
 				for j = 1 to length(lKV[i][2]) do
 					switch lower(lKV[i][2][j]) do
 					case "bold" then
 						vAllowedDecorations = seq:add_item('*', vAllowedDecorations)
-						break
 
 					case "italic" then
 						vAllowedDecorations = seq:add_item('/', vAllowedDecorations)
-						break
 
 					case "monospace" then
 						vAllowedDecorations = seq:add_item('#', vAllowedDecorations)
-						break
 
 					case "underline" then
 						vAllowedDecorations = seq:add_item('_', vAllowedDecorations)
-						break
 
 					case "superscript" then
 						vAllowedDecorations = seq:add_item('^', vAllowedDecorations)
-						break
 
 					case "subscript" then
 						vAllowedDecorations = seq:add_item(',', vAllowedDecorations)
-						break
 
 					case "strikethru" then
 						vAllowedDecorations = seq:add_item('-', vAllowedDecorations)
-						break
 
 					case "insert" then
 						vAllowedDecorations = seq:add_item('+', vAllowedDecorations)
-						break
 
 					case "camelcase" then
 						vAllowCamelCase = 1
-						break
 
 					end switch
 				end for
-				break
 
 		end switch
 	end for
 
-	return {lEndPos - 1}
+	return {lEndPos - 1, lText}
 end function
 
 ------------------------------------------------------------------------------
@@ -1628,9 +1626,9 @@ function get_heading(sequence pRawText, atom pFrom)
 	lText = Generate_Final(Comment, vRawContext) &
 	        Generate_Final(Bookmark, lBookMark) &
 	        Generate_Final(Heading, {lLevel, lNums & lText})
-	if vSplitLevel > 0 and lLevel <= vSplitLevel then
+	if vExplicitOutput = 0 and vSplitLevel > 0 and lLevel <= vSplitLevel then
 		lText = TAG_ENDFILE & lText
-		vSplitFile = append(vSplitFile, sprintf("%s_%04d", {vSplitName, length(vSplitFile)+1}))
+		vOutputFile = append(vOutputFile, sprintf("%s_%04d", {vSplitName, length(vOutputFile)+1}))
 	end if
 
 	add_bookmark('h', length(vHeadings), lBookMark)
@@ -3419,8 +3417,8 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 					if lExtract[1] = 0 then
 						lText &= lExtract[3]
 					else
-						if length(vSplitFile) > 0 then
-							lNewPlugin =  {lExtract[3], vCurrentContext, vSplitFile[$], length(vElements) + 1}
+						if length(vOutputFile) > 0 then
+							lNewPlugin =  {lExtract[3], vCurrentContext, vOutputFile[$], length(vElements) + 1}
 						else
 							lNewPlugin =  {lExtract[3], vCurrentContext, "", length(vElements) + 1}
 						end if
@@ -3448,6 +3446,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 				then
 					lExtract = get_options(pRawText, lPos)
 					lPos = lExtract[1]
+					lText &= lExtract[2]
 					lChar = -1
 					break "Tagger"
 				end if
@@ -4053,7 +4052,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 				case CO_SplitLevel then
 						if integer(pContext) and pContext >= 0 then
 							if vSplitLevel = 0 then
-								vSplitFile = append(vSplitFile, sprintf("%s_%04d", {vSplitName, length(vSplitFile)+1}))
+								vOutputFile = append(vOutputFile, sprintf("%s_%04d", {vSplitName, length(vOutputFile)+1}))
 							end if
 							vSplitLevel = pContext
 						end if
@@ -4108,7 +4107,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 		vHostID = Generate_Final(HostID)
 		vReparseHeading = Generate_Final(OptReparseHeadings)
 		vSplitLevel = 0
-		vSplitFile = {}
+		vOutputFile = {}
 
 		-- Standardise line endings
 		lFrom = 1
@@ -4219,7 +4218,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			end if
 		end for
 
-		if length(vSplitFile) > 0 then
+		if length(vOutputFile) > 0 then
 			if vVerbose then
 				puts(1, "Splitting into files.\n")
 			end if
@@ -4232,8 +4231,8 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 					if vVerbose then
 						printf(1, "Creating file #%d\n", lFileNo)
 					end if
-					lMultiText = append(lMultiText, {vSplitFile[lFileNo],
-						Generate_Final(Document,{lText[lFrom .. lPos - 1],vSplitFile[lFileNo] })})
+					lMultiText = append(lMultiText, {vOutputFile[lFileNo],
+						Generate_Final(Document,{lText[lFrom .. lPos - 1],vOutputFile[lFileNo] })})
 				end if
 				lFrom = lPos + 1
 				lFileNo += 1
@@ -4243,8 +4242,8 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 			if vVerbose then
 				printf(1, "Creating file #%d\n", lFileNo)
 			end if
-			lMultiText = append(lMultiText, {vSplitFile[lFileNo],
-				Generate_Final(Document,{lText[lFrom .. $],vSplitFile[lFileNo]})})
+			lMultiText = append(lMultiText, {vOutputFile[lFileNo],
+				Generate_Final(Document,{lText[lFrom .. $],vOutputFile[lFileNo]})})
 			return lMultiText
 		else
 			return Generate_Final(Document, {lText, ""})
