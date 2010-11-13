@@ -1191,15 +1191,15 @@ function get_options(sequence pRawText, atom pFrom)
 				sequence tempfn = lKV[i][2]
 				vExplicitOutput = 1
 				if length(tempfn) > 0 then
-					tempfn = replace_all(tempfn, '/', '_') -- Unix style delim
-					tempfn = replace_all(tempfn, '\\', '_') -- Windows style delim
-					tempfn = replace_all(tempfn, '.', '_')
-					tempfn = replace_all(tempfn, '<', '_')
-					tempfn = replace_all(tempfn, '>', '_')
+					tempfn = match_replace(tempfn, '/', '_') -- Unix style delim
+					tempfn = match_replace(tempfn, '\\', '_') -- Windows style delim
+					tempfn = match_replace(tempfn, '.', '_')
+					tempfn = match_replace(tempfn, '<', '_')
+					tempfn = match_replace(tempfn, '>', '_')
 					ifdef WINDOWS then
-							tempfn = replace_all(tempfn, '?', '_')
-							tempfn = replace_all(tempfn, '*', '_')
-							tempfn = replace_all(tempfn, ':', '_')
+							tempfn = match_replace(tempfn, '?', '_')
+							tempfn = match_replace(tempfn, '*', '_')
+							tempfn = match_replace(tempfn, ':', '_')
 					end ifdef
 					
 					vOutputFile = append(vOutputFile, tempfn)
@@ -2261,7 +2261,7 @@ function get_linebroken(sequence pRawText, atom pFrom)
 	end while
 	lEndPos = lNewPos - 3
 
-	lText = replace_all(pRawText[lStartPos .. lEndPos - 1], "\n", "\\\\\n")
+	lText = match_replace(pRawText[lStartPos .. lEndPos - 1], "\n", "\\\\\n")
 	if length(lText) = 0 then
 		lText = `\\`
 	elsif lText[$] != '\n' then
