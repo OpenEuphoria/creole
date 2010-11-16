@@ -1,0 +1,8 @@
+wikis = {{"WIKICREOLE","http://wikicreole.org/wiki/"},
+         {"OHANA",     "http://wikiohana.net/cgi-bin/wiki.pl/"},
+         {"WIKIPEDIA", "http://wikipedia.org/wiki/"},
+         {"OPENEU",    "http://openeuphoria.org/wiki/view.wc?page="},
+         {"WIKI",      "http://openeuphoria.org/wiki/view.wc?page="},
+         $
+        }
+        
