@@ -35,6 +35,7 @@ sequence vDefaultExt = {
 }
 
 object vTemplateFile = 0
+object vTemplateFilename = 0
 
 sequence vOutDir = {}
 object vCurrentContext	
@@ -1002,6 +1003,7 @@ procedure main(sequence pArgs)
 	sequence lName
 	sequence lDefn
 	integer lDelimPos
+	integer lDidSetTemplateDir = 0
 
 	vPublishedDate = sprintf("%s\n", {datetime:format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
 	
@@ -1105,21 +1107,7 @@ procedure main(sequence pArgs)
 				if length(vOutDir) > 0 and find(vOutDir[$], "\\/") > 0 then
 					vOutDir = vOutDir[1 .. $-1]
 				end if
-			
-			elsif pArgs[lPos][2] = 't' then -- Template File
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				
-				vTemplateFile = kan:loadTemplateFromFile(lValue)
-				
-				if atom(vTemplateFile) then
-					printf(2,"\n*** Failed to load template from '%s'\n", { lValue })
-					abort(1)
-				end if
-				
+							
 			elsif pArgs[lPos][2] = 'l' then -- Heading Levels
 				if find(pArgs[lPos][3], "=:") > 0 then
 					lValue = pArgs[lPos][4..$]
@@ -1131,12 +1119,23 @@ procedure main(sequence pArgs)
 					lValue = creole_parse(Set_Option, CO_MaxNumLevel, lValue[2])
 				end if
 				
-			elsif pArgs[lPos][2] = 'd' then -- template directory
+			elsif pArgs[lPos][2] = 't' then -- Template File
 				if find(pArgs[lPos][3], "=:") > 0 then
 					lValue = pArgs[lPos][4..$]
 				else
 					lValue = pArgs[lPos][3..$]
 				end if
+				
+				vTemplateFilename = lValue
+				
+			elsif pArgs[lPos][2] = 'd' then -- Template Directory
+				if find(pArgs[lPos][3], "=:") > 0 then
+					lValue = pArgs[lPos][4..$]
+				else
+					lValue = pArgs[lPos][3..$]
+				end if
+				
+				lDidSetTemplateDir = 1
 				setTemplateDirectory( lValue )
 				
 			elsif equal( pArgs[lPos], "-htmldoc") then
@@ -1153,6 +1152,28 @@ procedure main(sequence pArgs)
 		
 		lPos += 1
 	end while
+	
+	if sequence(vTemplateFilename) then
+		sequence templateDir, templateFilename = vTemplateFilename
+		
+		if not lDidSetTemplateDir then
+			sequence canonicalFilename
+			
+			canonicalFilename = canonical_path(vTemplateFilename)
+			templateDir       = pathname(canonicalFilename)
+			templateFilename  = filename(canonicalFilename)
+			
+			kan:setTemplateDirectory(templateDir & SLASH)
+			lDidSetTemplateDir = 1
+		end if
+		
+		vTemplateFile = kan:loadTemplateFromFile(templateFilename)
+		
+		if atom(vTemplateFile) then
+			printf(2,"\n*** Failed to load template from '%s'\n", { vTemplateFilename })
+			abort(1)
+		end if
+	end if		
 	
 	for i = 3 to length(pArgs) do	
 		if length(pArgs[i]) = 0 then
