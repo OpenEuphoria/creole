@@ -1,24 +1,26 @@
 #!/usr/bin/env eui
 
-include creole.e
-include std/text.e
-include std/search.e as search
-include std/filesys.e
-include std/io.e
-include std/sort.e
-include std/get.e
 include std/datetime.e
-include std/math.e
 include std/error.e
-include std/sequence.e
+include std/filesys.e
+include std/get.e
+include std/io.e
 include std/map.e
+include std/math.e
 include std/pretty.e
+include std/search.e
+include std/sequence.e
+include std/sort.e
+include std/text.e
+
+include creole.e
+include html_gen.e
+include kanarie.e as kan
+
 sequence JSON_OPTS = PRETTY_DEFAULT
 JSON_OPTS[DISPLAY_ASCII] = 3
 
-include kanarie.e as kan
 
-include html_gen.e
 -- Increment version number with each release, not really with each change
 -- in the SCM
 
@@ -1110,9 +1112,14 @@ procedure main(sequence pArgs)
 				else
 					lValue = pArgs[lPos][3..$]
 				end if
-
-				vTemplateFile = kan:loadTemplateFromFile(lValue)
-
+				
+				sequence canonicalFilename = canonical_path(lValue)
+				sequence templateDir       = pathname(canonicalFilename)
+				sequence templateFilename  = filename(canonicalFilename)
+				
+				kan:setTemplateDirectory(templateDir & SLASH)
+				vTemplateFile = kan:loadTemplateFromFile(templateFilename)
+				
 				if atom(vTemplateFile) then
 					printf(2,"\n*** Failed to load template from '%s'\n", { lValue })
 					abort(1)
