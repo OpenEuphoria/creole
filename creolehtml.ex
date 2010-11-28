@@ -32,7 +32,8 @@ sequence vDefaultExt = {
 	"wiki", "txt", "creole"
 }
 
-sequence vTemplateFile = ""
+object vTemplateFile = 0
+
 sequence vOutDir = {}
 object vCurrentContext	
 sequence KnownWikis
@@ -200,7 +201,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				end if
 			end for
 			
-			if length(vTemplateFile) then
+			if sequence(vTemplateFile) then
 				lLookingNext = 0
 				lSkipping = 0
 				lNextPageFile = {{},{}}
@@ -212,7 +213,6 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				lTOCFile = ""
 				lHomeFile = ""
 				lThisContext = ""
-				
 				
 				-- Find TOC and Home
 				for i = 1 to length(lElements) do
@@ -307,13 +307,8 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				kan:setValue(lData, "toc", make_filename(lTOCFile,""))
 				kan:setValue(lData, "publishedon", vPublishedDate)
 				kan:setValue(lData, "quicklink", join( vQuickLink, "\n" ) )
-				lHeadings = kan:loadTemplateFromFile(vTemplateFile)
-
-				if atom(lHeadings) then
-					printf(2,"\n*** Failed to load template from '%s'\n", {vTemplateFile})
-					abort(1)
-				end if
-				lHTMLText = kan:generate(lData, lHeadings)
+				
+				lHTMLText = kan:generate(lData, vTemplateFile)
 			else
 				lHTMLText = "<!DOCTYPE html \n" &
 							"  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" &
@@ -1116,7 +1111,12 @@ procedure main(sequence pArgs)
 					lValue = pArgs[lPos][3..$]
 				end if
 
-				vTemplateFile = lValue
+				vTemplateFile = kan:loadTemplateFromFile(lValue)
+
+				if atom(vTemplateFile) then
+					printf(2,"\n*** Failed to load template from '%s'\n", { lValue })
+					abort(1)
+				end if
 				
 			elsif pArgs[lPos][2] = 'l' then -- Heading Levels
 				if find(pArgs[lPos][3], "=:") > 0 then
