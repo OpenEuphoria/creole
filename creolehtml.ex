@@ -1113,12 +1113,7 @@ procedure main(sequence pArgs)
 					lValue = pArgs[lPos][3..$]
 				end if
 				
-				sequence canonicalFilename = canonical_path(lValue)
-				sequence templateDir       = pathname(canonicalFilename)
-				sequence templateFilename  = filename(canonicalFilename)
-				
-				kan:setTemplateDirectory(templateDir & SLASH)
-				vTemplateFile = kan:loadTemplateFromFile(templateFilename)
+				vTemplateFile = kan:loadTemplateFromFile(lValue)
 				
 				if atom(vTemplateFile) then
 					printf(2,"\n*** Failed to load template from '%s'\n", { lValue })
