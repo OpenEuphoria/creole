@@ -1047,7 +1047,7 @@ procedure main()
 		vTemplateFile = kan:loadTemplateFromFile(templateFilename)
 		
 		if atom(vTemplateFile) then
-			printf(2,"\n*** Failed to load template from '%s'\n", { vTemplateFilename })
+			printf(2,"\n*** Failed to load template from '%s'\n", { kan:getTemplateDirectory() & vTemplateFilename })
 			abort(1)
 		end if
 	end if		

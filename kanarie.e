@@ -41,6 +41,10 @@ current_template = {}
 char = -1
 eof = 0
 
+export function getTemplateDirectory()
+	return template_dir
+end function
+
 export procedure setTemplateDirectory(sequence d)
 	template_dir = d
 end procedure
@@ -445,7 +449,9 @@ global function loadTemplateFromFile(sequence filename)
 	textreader reader
 	sequence template, tmp_template
 	reader = open_filereader(template_dir & filename)
-	if reader[TEXTREADER_INSTANCE] = -1 then return -1 end if
+	if reader[TEXTREADER_INSTANCE] = -1 then 
+		return -1
+	end if
 	template = loadTemplateFromTextReader(reader)
 	close_textreader(reader)
 
