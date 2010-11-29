@@ -1,5 +1,6 @@
 #!/usr/bin/env eui
 
+include std/cmdline.e
 include std/datetime.e
 include std/error.e
 include std/filesys.e
@@ -12,6 +13,7 @@ include std/search.e
 include std/sequence.e
 include std/sort.e
 include std/text.e
+include std/utils.e
 
 include creole.e
 include html_gen.e
@@ -39,27 +41,27 @@ object vTemplateFilename = 0
 
 sequence vOutDir = {}
 object vCurrentContext	
-sequence KnownWikis
 
 atom vStartTime = time()
 sequence vPublishedDate
 sequence vQuickLink = {}
 
-KnownWikis  = {}
-KnownWikis &= {{"WIKICREOLE",	"http://wikicreole.org/wiki/"}}
-KnownWikis &= {{"OHANA",		"http://wikiohana.net/cgi-bin/wiki.pl/"}}
-KnownWikis &= {{"WIKIPEDIA",	"http://wikipedia.org/wiki/"}}
-KnownWikis &= {{"OPENEU",       "http://openeuphoria.org/wiki/view.wc?page="}}
-KnownWikis &= {{"WIKI",         "http://openeuphoria.org/wiki/view.wc?page="}}
+sequence KnownWikis  = {
+	{ "WIKICREOLE",	"http://wikicreole.org/wiki/"},
+	{ "OHANA",      "http://wikiohana.net/cgi-bin/wiki.pl/"},
+	{ "WIKIPEDIA",  "http://wikipedia.org/wiki/"},
+	{ "OPENEU",     "http://openeuphoria.org/wiki/view.wc?page="},
+	{ "WIKI",       "http://openeuphoria.org/wiki/view.wc?page="}
+}
 
 -----------------------------------------------------------------
 function fixup_seps(sequence pFileName)
 -----------------------------------------------------------------
-ifdef WINDOWS then
-	return search:match_replace('/', pFileName, SLASH)
-elsedef
-	return search:match_replace('\\', pFileName, SLASH)
-end ifdef
+	ifdef WINDOWS then
+		return search:match_replace('/', pFileName, SLASH)
+	elsedef
+		return search:match_replace('\\', pFileName, SLASH)
+	end ifdef
 end function
 
 -----------------------------------------------------------------
@@ -955,54 +957,8 @@ procedure Generate(sequence pFileName)
 end procedure
 
 -----------------------------------------------------------------
-function getArgs(sequence pArgFile)
+procedure main()
 -----------------------------------------------------------------
-	object lLines
-	sequence lArgs = {}
-	integer lAppending = 0
-
-	lLines = read_lines(pArgFile)
-	if atom(lLines) then
-		return {"-M=Arg file '" & pArgFile & "' not available."}
-	end if
-	
-	for i = 1 to length(lLines) do
-		if length(lLines[i]) = 0 then
-			if lAppending then
-				lArgs[$] &= '\n'
-			end if
-			continue
-		end if
-		
-		if lLines[i][$] = '(' then
-			lAppending = 1
-			lArgs = append(lArgs, lLines[i][1..$-1])
-		elsif equal(trim(lLines[i]), ")") then
-			if lAppending then
-				lAppending = 0
-			else
-				lArgs = append(lArgs, lLines[i])
-			end if
-		elsif lAppending then
-			lArgs[$] &= '\n' & lLines[i]
-		else
-			lArgs = append(lArgs, lLines[i])
-		end if
-	end for
-
-	return lArgs
-end function
-
------------------------------------------------------------------
-procedure main(sequence pArgs)
------------------------------------------------------------------
-	integer lPos
-	integer lCount
-	sequence lValue
-	sequence lNewArgs
-	sequence lName
-	sequence lDefn
-	integer lDelimPos
 	integer lDidSetTemplateDir = 0
 
 	vPublishedDate = sprintf("%s\n", {datetime:format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
@@ -1012,147 +968,68 @@ procedure main(sequence pArgs)
 		KnownWikis = map:get( base_options, "wikis", KnownWikis)
 	end if
 	
-	lPos = 3
-	lCount = length(pArgs)
-	while 1 do
-		if lPos > lCount then
-			exit
-		end if
-		if length(pArgs[lPos]) = 0 then
-			lPos += 1
-			continue
-		end if
-		
-		if pArgs[lPos][1] = '@' then
-			lNewArgs = getArgs(pArgs[lPos][2..$])
-			pArgs = pArgs[1 .. lPos - 1] & lNewArgs & pArgs[lPos + 1 .. $]
-			lCount = length(pArgs)
-			continue
-		end if
-		
-		if pArgs[lPos][1] = '-' then
-			if pArgs[lPos][2] = 'M' then -- Show message
-				if not vQuiet then
-					if find(pArgs[lPos][3], "=:") > 0 then
-						lValue = pArgs[lPos][4..$]
-					else
-						lValue = pArgs[lPos][3..$]
-					end if
-					if length(lValue) > 0 then
-						puts(2, lValue)
-						puts(2, '\n')
-					end if
-				end if
-								
-			elsif pArgs[lPos][2] = 'm' then -- Define a macro
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				lDelimPos = find_any(" \n\r\t", lValue)
-				lName = lValue[1 .. lDelimPos - 1]
-				lDefn = lValue[lDelimPos + 1 .. $]
-				lValue = creole_parse(Set_Macro, trim(lName), lDefn)
-				
-			elsif pArgs[lPos][2] = 'v' then -- Verbose
-				if length(pArgs[lPos]) = 2 then
-					-- show version.
-					printf(1, "CreoleHtml v%s\n", { APP_VERSION })
-					abort(0)
-				end if
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				if find(trim(upper(lValue)), {"ON","YES","1"}) > 0 then
-					vVerbose = 1
-				else
-					vVerbose = 0
-				end if
-				
-			elsif pArgs[lPos][2] = 'A' then -- Macro Usage
-
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				if find(trim(upper(lValue)), {"ON","YES","1"}) > 0 then
-					lValue = creole_parse(Set_Option, CO_AllowMacros, "YES")
-				else
-					lValue = creole_parse(Set_Option, CO_AllowMacros, "NO")
-				end if
-				
-			elsif pArgs[lPos][2] = 'q' then -- Quiet
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				if find(trim(upper(lValue)), {"ON","YES","1"}) > 0 then
-					vQuiet = 1
-				else
-					vQuiet = 0
-				end if
-				
-			elsif pArgs[lPos][2] = 'o' then -- Output directory
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				vOutDir = lValue
-				if length(vOutDir) > 0 and find(vOutDir[$], "\\/") > 0 then
-					vOutDir = vOutDir[1 .. $-1]
-				end if
-							
-			elsif pArgs[lPos][2] = 'l' then -- Heading Levels
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				lValue = value(lValue)
-				if lValue[1] = GET_SUCCESS then
-					lValue = creole_parse(Set_Option, CO_MaxNumLevel, lValue[2])
-				end if
-				
-			elsif pArgs[lPos][2] = 't' then -- Template File
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				
-				vTemplateFilename = lValue
-				
-			elsif pArgs[lPos][2] = 'd' then -- Template Directory
-				if find(pArgs[lPos][3], "=:") > 0 then
-					lValue = pArgs[lPos][4..$]
-				else
-					lValue = pArgs[lPos][3..$]
-				end if
-				
-				lDidSetTemplateDir = 1
-				setTemplateDirectory( lValue )
-				
-			elsif equal( pArgs[lPos], "-htmldoc") then
-				use_span_for_color = 0
-								
-			elsif pArgs[lPos][2] = '-' then -- Output directory
-				-- A comment so ignore it
-				
-			else
-				printf(2, "** Unrecognized option '%s' ignored.\n", {pArgs[lPos]})
-				
-			end if
-		end if
-		
-		lPos += 1
-	end while
+	sequence cmd_options = {
+		{ "A", 0,         "Enable macros",       { NO_PARAMETER,  HAS_CASE, ONCE } },
+		{ "m", 0,         "Define a macro",      { HAS_PARAMETER, "macro", HAS_CASE } },
+		{ "l", 0,         "Heading levels",      { HAS_PARAMETER, "num", HAS_CASE, ONCE } },
+		{ "o", 0,         "Output directory",    { HAS_PARAMETER, "dir", HAS_CASE, ONCE } },
+		{ "t", 0,         "Template file",       { HAS_PARAMETER, "filename", HAS_CASE, ONCE } },
+		{ "d", 0,         "Template directory",  { HAS_PARAMETER, "dir", HAS_CASE, ONCE } },
+		{   0, "htmldoc", "Use span for colors", { NO_PARAMETER,  HAS_CASE, ONCE } },
+		{ "M", 0,         "Show message",        { HAS_PARAMETER, "message", HAS_CASE } },
+		{ "q", 0,         "Quiet",               { NO_PARAMETER,  HAS_CASE, ONCE } },
+		{ "v", 0,         "Verbose",             { NO_PARAMETER,  HAS_CASE, ONCE } },
+		{   0, "version", "Display version",     { VERSIONING, "CreoleHtml v" & APP_VERSION } },
+		{ 0,   0,         0,                     { MULTIPLE, MANDATORY } }
+	}
 	
+	map opts = cmd_parse(cmd_options, { AT_EXPANSION })
+	
+	-- Handle verbose
+	vVerbose = map:get(opts, "v", 0)
+	vQuiet   = map:get(opts, "q", 0)
+	use_span_for_color = map:get(opts, "htmldoc", 0)		
+	vTemplateFilename = map:get(opts, "t", 0)
+	creole_parse(Set_Option, CO_AllowMacros, iff(map:get(opts, "A", 0), "NO", "YES"))
+
+	-- Handle output directory
+	vOutDir = map:get(opts, "o", "")
+	if length(vOutDir) > 0 and find(vOutDir[$], "\\/") > 0 then
+		vOutDir = vOutDir[1 .. $-1]
+	end if
+	
+	-- Handle template directory
+	if length(map:get(opts, "d", "")) then
+		lDidSetTemplateDir = 1
+		setTemplateDirectory(map:get(opts, "d"))
+	end if
+	
+	-- Handle template file
+	vTemplateFilename = map:get(opts, "t", 0)
+	
+	-- Handle heading levels
+	sequence headingLevels = value(map:get(opts, "l", ""))
+	if headingLevels[1] = GET_SUCCESS then
+		creole_parse(Set_Option, CO_MaxNumLevel, headingLevels[2])
+	end if
+	
+	-- Handle Show Message
+	sequence messages = map:get(opts, "M", {})
+	for i = 1 to length(messages) do
+		printf(2, "%s\n", { messages[i] })
+	end for
+	
+	-- Handle macro definitions
+	sequence macros = map:get(opts, "m", {})
+	for i = 1 to length(macros) do
+		sequence macro = macros[i]
+		integer lDelimPos = find_any(" \n\r\t", macro)
+		sequence lName = macro[1 .. lDelimPos - 1]
+		sequence lDefn = macro[lDelimPos + 1 .. $]
+		
+		creole_parse(Set_Macro, trim(lName), lDefn)
+	end for
+		
 	if sequence(vTemplateFilename) then
 		sequence templateDir, templateFilename = vTemplateFilename
 		
@@ -1174,23 +1051,15 @@ procedure main(sequence pArgs)
 			abort(1)
 		end if
 	end if		
-	
-	for i = 3 to length(pArgs) do	
-		if length(pArgs[i]) = 0 then
-			continue
-		end if
-		if pArgs[i][1] != '-' then
-			Generate(pArgs[i])
-		end if
+
+	sequence files = map:get(opts, OPT_EXTRAS, {})	
+	for i = 1 to length(files) do
+		Generate(files[i])
 	end for
 	
 	if vVerbose then
 		printf(1, "\nDuration %g\n", time() - vStartTime)
-	end if
-	
+	end if	
 end procedure
 
------------------------------------------------------------------
------------------------------------------------------------------
-
-main(command_line())
+main()
