@@ -181,7 +181,7 @@ procedure ProcessArgs(sequence pArgs)
 	vMaxEntriesPerFile = to_integer(map:get(opts, "max", "50"))	
 	vAfterMax          = to_integer(map:get(opts, "after", "12"))
 	vBeforeMax         = to_integer(map:get(opts, "before", "12"))
-	lSource            = map:get(opts, OPT_EXTRAS)
+	lSource            = map:get(opts, cmdline:EXTRAS)
 	
 	-- Get list of source files from command line args.
 	for i = 1 to length(lSource) do

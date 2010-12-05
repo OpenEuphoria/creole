@@ -990,7 +990,7 @@ procedure main()
 	vQuiet   = map:get(opts, "q", 0)
 	use_span_for_color = map:get(opts, "htmldoc", 0)		
 	vTemplateFilename = map:get(opts, "t", 0)
-	creole_parse(Set_Option, CO_AllowMacros, iff(map:get(opts, "A", 0), "NO", "YES"))
+	creole_parse(Set_Option, CO_AllowMacros, iif(map:get(opts, "A", 0), "NO", "YES"))
 
 	-- Handle output directory
 	vOutDir = map:get(opts, "o", "")
@@ -1052,7 +1052,7 @@ procedure main()
 		end if
 	end if		
 
-	sequence files = map:get(opts, OPT_EXTRAS, {})	
+	sequence files = map:get(opts, cmdline:EXTRAS, {})	
 	for i = 1 to length(files) do
 		Generate(files[i])
 	end for
