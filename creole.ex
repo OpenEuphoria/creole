@@ -18,6 +18,7 @@ include std/utils.e
 include creole.e
 include common_gen.e
 include html_gen.e
+include latex_gen.e
 
 include kanarie.e as kan
 
