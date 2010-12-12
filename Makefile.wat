@@ -9,27 +9,27 @@ CREOLEHTML= creole.e filreadr.e html_gen.e kanarie.e seqreadr.e txtreadr.e
 PREFIX=$(%EUDIR)
 !endif
 
-all : .SYMBOLIC build\creolehtml.exe
+all : .SYMBOLIC build\creole.exe
 
-build\main-.c build\creolehtml.mak : creolehtml.ex $(CREOLEHTML)
+build\main-.c build\creole.mak : creole.ex $(CREOLEHTML)
 	-mkdir build
 	cd build
-	euc -makefile -con ..\creolehtml.ex
+	euc -makefile -con ..\creole.ex
 	cd ..
 
-build\creolehtml.exe : build\main-.c build\creolehtml.mak
+build\creole.exe : build\main-.c build\creole.mak
 	 cd build
-	$(MAKE) -f creolehtml.mak
+	$(MAKE) -f creole.mak
 	cd ..
 
 install : .SYMBOLIC
-	copy build\creolehtml.exe $(PREFIX)\bin\
+	copy build\creole.exe $(PREFIX)\bin\
 
 uninstall : .SYMBOLIC 
-	-del $(PREFIX)\bin\creolehtml.exe
+	-del $(PREFIX)\bin\creole.exe
 
 clean : .SYMBOLIC 
 	-del /S /Q build
 
 distclean : .SYMBOLIC clean
-	-del Makefile
+	-del Makefile config.wat
