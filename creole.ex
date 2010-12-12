@@ -184,7 +184,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			end if
 			
 		case Document then
-			lHeadings = creole_parse(Get_Macro,"title")
+			lHeadings = creole_parse(Get_Macro, "title")
 			
 			-- First we find out what level this page is on.				
 			lThisFile = pParms[2]
@@ -316,7 +316,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 				
 				lDocText = kan:generate(lData, vTemplateFile)
 			else
-				common_gen:default_template(lHeadings, lThisContext, pParms[1])
+				lDocText = common_gen:default_template(lHeadings, lThisContext, pParms[1])
 			end if
 
 		case Plugin then
@@ -477,12 +477,6 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 				break
 			end switch
 			
-		case HostID  then
-			lDocText = "euwiki"
-
-		case OptReparseHeadings  then
-			lDocText = ""
-
 		case else
 			lDocText = common_gen:generate(pAction, pParms)
 	end switch
@@ -1018,12 +1012,20 @@ procedure main()
 		if atom(vTemplateFile) then
 			printf(2,"\n*** Failed to load template from '%s'\n", { 
 				kan:getTemplateDirectory() & vTemplateFilename })
+			
 			abort(1)
 		end if
 	end if		
 	
 	-- Handle format (set default to HTML)
-	common_gen:set(map:get(opts, "format", "html"))
+	if not common_gen:set(map:get(opts, "format", "html")) then
+		printf(2, "*** Invalid format %s, please try one of %s\n", {
+			map:get(opts, "format", "html"),
+			common_gen:names()
+		})
+		
+		abort(1)
+	end if
 
 	sequence files = map:get(opts, cmdline:EXTRAS, {})	
 	for i = 1 to length(files) do
