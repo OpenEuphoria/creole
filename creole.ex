@@ -96,8 +96,8 @@ end function
 
 sequence vStatus = {}
 
-function generate_html(integer pAction, sequence pParms, object pContext)
-	sequence lHTMLText
+function generate_doc(integer pAction, sequence pParms, object pContext)
+	sequence lDocText
 	integer lPos
 	integer lIdx
 	integer lInstance
@@ -132,7 +132,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 	sequence lFontFace
 	sequence lText
 
-	lHTMLText = ""
+	lDocText = ""
 	lSpacer = ""
 
 	if vVerbose then
@@ -144,38 +144,39 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 	end if
 	
 	switch pAction do
-	case InternalLink  then
+		case InternalLink  then
 			if find('.', pParms[1]) = 0 then
 				lSuffix = ".html"
 			else
 				lSuffix = ""
 			end if
-			lHTMLText = sprintf("<a class=\"euwiki\" href=\"%s%s\">%s</a>", {pParms[1], lSuffix, pParms[2]})
-			break
+			lDocText = sprintf("<a class=\"euwiki\" href=\"%s%s\">%s</a>", {pParms[1], lSuffix, pParms[2]})
 
-	case  InterWikiLink  then
-			lHTMLText = ""
+		case InterWikiLink  then
+			lDocText = ""
 			lPos = find(':', pParms[1])
 			lWiki = upper(pParms[1][1 .. lPos - 1])
 			lPage = pParms[1][lPos + 1 .. $]
 			for i = 1 to length(KnownWikis) do
 				if equal(lWiki, KnownWikis[i][1]) then
-					lHTMLText = sprintf("<a class=\"euwiki\" href=\"%s%s\">%s</a>", {KnownWikis[i][2], lPage, pParms[2]})
-					
+					lDocText = sprintf("<a class=\"euwiki\" href=\"%s%s\">%s</a>", {
+						KnownWikis[i][2], lPage, pParms[2] 
+					})
 				end if
 			end for
-			if length(lHTMLText) = 0 then
-				lHTMLText = "<span class=\"euwiki_error\"><font color=\"red\">Interwiki link failed for "
+			
+			if length(lDocText) = 0 then
+				lDocText = "<span class=\"euwiki_error\"><font color=\"red\">Interwiki link failed for "
 				for i = 1 to length(pParms) do
-					lHTMLText &= pParms[i]
+					lDocText &= pParms[i]
 					if i < length(pParms) then
-						lHTMLText &= ", "
+						lDocText &= ", "
 					end if
 				end for
-				lHTMLText &= "</font></span>"
+				lDocText &= "</font></span>"
 			end if
-			break
-	case Document then
+			
+		case Document then
 			lHeadings = creole_parse(Get_Macro,"title")
 			
 			-- First we find out what level this page is on.				
@@ -306,9 +307,9 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				kan:setValue(lData, "publishedon", vPublishedDate)
 				kan:setValue(lData, "quicklink", join( vQuickLink, "\n" ) )
 				
-				lHTMLText = kan:generate(lData, vTemplateFile)
+				lDocText = kan:generate(lData, vTemplateFile)
 			else
-				lHTMLText = "<!DOCTYPE html \n" &
+				lDocText = "<!DOCTYPE html \n" &
 							"  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" &
 							"  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" &
 							"\n" &
@@ -324,183 +325,176 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 							pParms[1] &
 							"</body></html>"	
 			end if
-			break					
 
-	case Plugin then
-		lInstance = pParms[4]
-		-- Extract the key/values, but don't parse for quoted text nor whitespace delims.
-		lParms = keyvalues(pParms[1], -1, -2, "", "")
-		for i = 1 to length(lParms) do
-			lParms[i][1] = lower(lParms[i][1])
-		end for
-		lParms[1][2] = upper(lParms[1][2])
-		lHTMLText = ""
-		
-		if vVerbose then
-			printf(1, "Plugin: %s\n", {lParms[1][2]}) 
-		end if
-		switch lParms[1][2] do
-			case "TOC" then
-				
-				lValue = {0,2}
-				sequence lStartDepth = { 0, 0 }
-				lSpacer = ""
-				for i = 2 to length(lParms) do
-					if equal(lParms[i][1], "heading") then
-						if find(lParms[i][2], {"yes", "on", "show", "1"}) then
-							lHTMLText &= "<p class=\"TOCHead\">Table of Contents</p>"
-						end if
-					elsif equal(lParms[i][1], "level") then
-						lValue = value(lParms[i][2])
-						if lValue[1] != GET_SUCCESS then
-							lValue[2] = 2
-						end if
-					elsif equal(lParms[i][1], "spacer") then
-						lSpacer = search:match_replace("^", lParms[i][2], " ")
+		case Plugin then
+			lInstance = pParms[4]
+			-- Extract the key/values, but don't parse for quoted text nor whitespace delims.
+			lParms = keyvalues(pParms[1], -1, -2, "", "")
+			for i = 1 to length(lParms) do
+				lParms[i][1] = lower(lParms[i][1])
+			end for
+			lParms[1][2] = upper(lParms[1][2])
+			lDocText = ""
+			
+			if vVerbose then
+				printf(1, "Plugin: %s\n", {lParms[1][2]}) 
+			end if
+			switch lParms[1][2] do
+				case "TOC" then
 					
-					elsif equal(lParms[i][1], "start") then
-						lStartDepth = value(lParms[i][2])
-						if lStartDepth[1] != GET_SUCCESS then
-							lStartDepth[2] = 0
-						end if
-					end if
-				end for
-				
-				lHTMLText = buildTOC( 0, 1, {} )
-			
-			case "NAV" then
-				lHere = creole_parse(Get_CurrentHeading, , lInstance)
-				lHeadings = creole_parse(Get_Headings, , lHere[1])
-
-				lHTMLText = "<div class=\"NAV\">"
-				lPos = find(lHere, lHeadings)
-				lIdx = lPos - 1
-				while lIdx >= 1 do
-					if lHeadings[lIdx][1] = lHere[1] then
-						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
-								"#" & lHeadings[lIdx][3] & "\">" &
-								"Previous" & "</a>"
-						exit
-					end if
-					lIdx -= 1
-				end while
-				lHTMLText &= " "
-				
-				lHTMLText &= "<a href=\"" & make_filename(lHeadings[1][5],"") & 
-						"#" & lHeadings[1][3] & "\">" &
-						"Up" & "</a>"
-				lHTMLText &= " "
-				
-				lIdx = lPos + 1
-				while lIdx <= length(lHeadings) do
-					if lHeadings[lIdx][1] = lHere[1] then
-						lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
-								"#" & lHeadings[lIdx][3] & "\">" &
-								"Next" & "</a>"
-						exit
-					end if
-					lIdx += 1
-				end while				
-				
-				lHTMLText &= "</div>"
-				break
-			
-			case "LEVELTOC" then
-				integer lLevel = 1
-				lDepth = 4
-				
-				for i = 2 to length(lParms) do
-					if equal(lParms[i][1], "depth") then
-						lValue = value(lParms[i][2])
-						if lValue[1] = GET_SUCCESS then
-							lDepth = max({1,lValue[2]})
-						end if
+					lValue = {0,2}
+					sequence lStartDepth = { 0, 0 }
+					lSpacer = ""
+					for i = 2 to length(lParms) do
+						if equal(lParms[i][1], "heading") then
+							if find(lParms[i][2], {"yes", "on", "show", "1"}) then
+								lDocText &= "<p class=\"TOCHead\">Table of Contents</p>"
+							end if
+						elsif equal(lParms[i][1], "level") then
+							lValue = value(lParms[i][2])
+							if lValue[1] != GET_SUCCESS then
+								lValue[2] = 2
+							end if
+						elsif equal(lParms[i][1], "spacer") then
+							lSpacer = search:match_replace("^", lParms[i][2], " ")
 						
-					elsif equal(lParms[i][1], "level") then
-						lValue = value(lParms[i][2])
-						if lValue[1] = GET_SUCCESS then
-							lLevel = max({1,lValue[2]})
+						elsif equal(lParms[i][1], "start") then
+							lStartDepth = value(lParms[i][2])
+							if lStartDepth[1] != GET_SUCCESS then
+								lStartDepth[2] = 0
+							end if
 						end if
-					end if
-				end for
-				integer lDelim = -1
-				integer lIx
-				while lIx with entry do
-					pParms[1][lIx] = 32
-					lDelim -= 1
-				entry
-					lIx = find( lDelim, pParms[1] )
-				end while
-				lHere = creole_parse(Get_CurrentLevels, , {pParms[4], lLevel} )
-				lHTMLText = buildTOC( lLevel, lDepth, lHere )
-			
-			case "FONT" then
-				lFontColor = ""
-				lFontFace = ""
-				lFontSize = ""
-				lText = ""
-				for i = 2 to length(lParms) do
-					if equal(lParms[i][1], "color") then
-						lFontColor = lParms[i][2]
-					elsif equal(lParms[i][1], "size") then
-						lFontSize = lParms[i][2]
-					elsif equal(lParms[i][1], "face") then
-						lFontFace = lParms[i][2]
-					elsif equal(lParms[i][1], "text") then
-						lText &= lParms[i][2]
-					elsif equal(lParms[i][1][1..2], "p[") then
-						lText &= lParms[i][2]
-					end if
-				end for
-				if length(lText) > 0 then
-					lHTMLText = "<font "
-					if length(lFontColor) > 0 then
-						lHTMLText &= "color=\"" & call_func(common_gen:rid(), { Sanitize, lFontColor, "" }) & "\" "
-					end if
-					if length(lFontFace) > 0 then
-						lHTMLText &= "face=\"" & call_func(common_gen:rid(), { Sanitize, lFontFace, "" }) & "\" "
-					end if
-					if length(lFontSize) > 0 then
-						lHTMLText &= "size=\"" & call_func(common_gen:rid(), { Sanitize, lFontSize, "" }) & "\" "
-					end if
-					lHTMLText &= ">"
-					lHTMLText &= parse_text(lText, 4) -- sanitized by parse_text
-					lHTMLText &= "</font>"
-				end if
+					end for
+					
+					lDocText = buildTOC( 0, 1, {} )
 				
+				case "NAV" then
+					lHere = creole_parse(Get_CurrentHeading, , lInstance)
+					lHeadings = creole_parse(Get_Headings, , lHere[1])
+	
+					lDocText = "<div class=\"NAV\">"
+					lPos = find(lHere, lHeadings)
+					lIdx = lPos - 1
+					while lIdx >= 1 do
+						if lHeadings[lIdx][1] = lHere[1] then
+							lDocText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
+									"#" & lHeadings[lIdx][3] & "\">" &
+									"Previous" & "</a>"
+							exit
+						end if
+						lIdx -= 1
+					end while
+					lDocText &= " "
+					
+					lDocText &= "<a href=\"" & make_filename(lHeadings[1][5],"") & 
+							"#" & lHeadings[1][3] & "\">" &
+							"Up" & "</a>"
+					lDocText &= " "
+					
+					lIdx = lPos + 1
+					while lIdx <= length(lHeadings) do
+						if lHeadings[lIdx][1] = lHere[1] then
+							lDocText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
+									"#" & lHeadings[lIdx][3] & "\">" &
+									"Next" & "</a>"
+							exit
+						end if
+						lIdx += 1
+					end while				
+					
+					lDocText &= "</div>"
+					break
+				
+				case "LEVELTOC" then
+					integer lLevel = 1
+					lDepth = 4
+					
+					for i = 2 to length(lParms) do
+						if equal(lParms[i][1], "depth") then
+							lValue = value(lParms[i][2])
+							if lValue[1] = GET_SUCCESS then
+								lDepth = max({1,lValue[2]})
+							end if
+							
+						elsif equal(lParms[i][1], "level") then
+							lValue = value(lParms[i][2])
+							if lValue[1] = GET_SUCCESS then
+								lLevel = max({1,lValue[2]})
+							end if
+						end if
+					end for
+					integer lDelim = -1
+					integer lIx
+					while lIx with entry do
+						pParms[1][lIx] = 32
+						lDelim -= 1
+					entry
+						lIx = find( lDelim, pParms[1] )
+					end while
+					lHere = creole_parse(Get_CurrentLevels, , {pParms[4], lLevel} )
+					lDocText = buildTOC( lLevel, lDepth, lHere )
+				
+				case "FONT" then
+					lFontColor = ""
+					lFontFace = ""
+					lFontSize = ""
+					lText = ""
+					for i = 2 to length(lParms) do
+						if equal(lParms[i][1], "color") then
+							lFontColor = lParms[i][2]
+						elsif equal(lParms[i][1], "size") then
+							lFontSize = lParms[i][2]
+						elsif equal(lParms[i][1], "face") then
+							lFontFace = lParms[i][2]
+						elsif equal(lParms[i][1], "text") then
+							lText &= lParms[i][2]
+						elsif equal(lParms[i][1][1..2], "p[") then
+							lText &= lParms[i][2]
+						end if
+					end for
+					if length(lText) > 0 then
+						lDocText = "<font "
+						if length(lFontColor) > 0 then
+							lDocText &= "color=\"" & call_func(common_gen:rid(), { Sanitize, lFontColor, "" }) & "\" "
+						end if
+						if length(lFontFace) > 0 then
+							lDocText &= "face=\"" & call_func(common_gen:rid(), { Sanitize, lFontFace, "" }) & "\" "
+						end if
+						if length(lFontSize) > 0 then
+							lDocText &= "size=\"" & call_func(common_gen:rid(), { Sanitize, lFontSize, "" }) & "\" "
+						end if
+						lDocText &= ">"
+						lDocText &= parse_text(lText, 4) -- sanitized by parse_text
+						lDocText &= "</font>"
+					end if
+					
+					break
+				
+				case "INDEX" then
+					lDocText = buildIndex( lParms )
+				
+				case "QUICKLINK" then
+					lDocText = sprintf("<a name=\"ql%d\"/>\n", { length(vQuickLink)} )
+					lHere = creole_parse(Get_CurrentHeading, , lInstance )
+					vQuickLink = append( vQuickLink, 
+						sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
+					
+				case else
+					lDocText = call_func(common_gen:rid(), { pAction, pParms, "" })
 				break
+			end switch
 			
-			case "INDEX" then
-				lHTMLText = buildIndex( lParms )
-			
-			case "QUICKLINK" then
-				lHTMLText = sprintf("<a name=\"ql%d\"/>\n", { length(vQuickLink)} )
-				lHere = creole_parse(Get_CurrentHeading, , lInstance )
-				vQuickLink = append( vQuickLink, 
-					sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
-				
-			case else
-				lHTMLText = call_func(common_gen:rid(), { pAction, pParms, "" })
-			break
-		end switch
-		
-		break
-			
-	case  HostID  then
-			lHTMLText = "euwiki"
-			break
+		case HostID  then
+			lDocText = "euwiki"
 
-	case  OptReparseHeadings  then
-			lHTMLText = ""
-			break
+		case OptReparseHeadings  then
+			lDocText = ""
 
-	case else
-			lHTMLText = call_func(common_gen:rid(), { pAction, pParms, "" })
-			
+		case else
+			lDocText = call_func(common_gen:rid(), { pAction, pParms, "" })
 	end switch
 
-	return lHTMLText
-
+	return lDocText
 end function
 
 sequence bm_level_names = repeat("", 6)
@@ -892,7 +886,7 @@ procedure Generate(sequence pFileName)
 		object VOID = creole_parse(Set_Option, CO_Verbose )
 	end if
 	
-	lOutText = creole_parse(lContent, routine_id("generate_html"), vCurrentContext)
+	lOutText = creole_parse(lContent, routine_id("generate_doc"), vCurrentContext)
 	if length(lOutText) > 0 then
 		if atom(lOutText[1]) then
 			fh = open(lOutFile, "w")
