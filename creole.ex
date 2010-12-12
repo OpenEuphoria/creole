@@ -21,6 +21,20 @@ include html_gen.e
 
 include kanarie.e as kan
 
+--
+-- TODO:
+--
+-- * Move to html_gen:
+--   * HTML search interface
+--
+-- * Abstract
+--   * InterWikiLink
+--   * TOC plugin
+--   * LEVELTOC plugin
+--   * FONT plugin
+--   * QUICKLINK plugin
+--
+
 sequence JSON_OPTS = PRETTY_DEFAULT
 JSON_OPTS[DISPLAY_ASCII] = 3
 
@@ -144,14 +158,6 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 	end if
 	
 	switch pAction do
-		case InternalLink  then
-			if find('.', pParms[1]) = 0 then
-				lSuffix = ".html"
-			else
-				lSuffix = ""
-			end if
-			lDocText = sprintf("<a class=\"euwiki\" href=\"%s%s\">%s</a>", {pParms[1], lSuffix, pParms[2]})
-
 		case InterWikiLink  then
 			lDocText = ""
 			lPos = find(':', pParms[1])
@@ -309,21 +315,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 				
 				lDocText = kan:generate(lData, vTemplateFile)
 			else
-				lDocText = "<!DOCTYPE html \n" &
-							"  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" &
-							"  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" &
-							"\n" &
-							"<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n" &
-							"\n" &
-							"<head>\n" &
-							"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n" & 
-							" <title>" & lHeadings & "</title>\n" &
-							" <link rel=\"stylesheet\" media=\"screen, projection, print\" type=\"text/css\" href=\"style.css\"/>\n" &
-							"<!-- source=\"" & lThisContext & "\" -->\n" &
-							"</head>\n" &
-							"<body>\n" & 
-							pParms[1] &
-							"</body></html>"	
+				common_gen:default_template(lHeadings, lThisContext, pParms[1])
 			end if
 
 		case Plugin then
@@ -455,13 +447,13 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 					if length(lText) > 0 then
 						lDocText = "<font "
 						if length(lFontColor) > 0 then
-							lDocText &= "color=\"" & call_func(common_gen:rid(), { Sanitize, lFontColor, "" }) & "\" "
+							lDocText &= "color=\"" & common_gen:generate(Sanitize, lFontColor) & "\" "
 						end if
 						if length(lFontFace) > 0 then
-							lDocText &= "face=\"" & call_func(common_gen:rid(), { Sanitize, lFontFace, "" }) & "\" "
+							lDocText &= "face=\"" & common_gen:generate(Sanitize, lFontFace) & "\" "
 						end if
 						if length(lFontSize) > 0 then
-							lDocText &= "size=\"" & call_func(common_gen:rid(), { Sanitize, lFontSize, "" }) & "\" "
+							lDocText &= "size=\"" & common_gen:generate(Sanitize, lFontSize) & "\" "
 						end if
 						lDocText &= ">"
 						lDocText &= parse_text(lText, 4) -- sanitized by parse_text
@@ -480,7 +472,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 						sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
 					
 				case else
-					lDocText = call_func(common_gen:rid(), { pAction, pParms, "" })
+					lDocText = common_gen:generate(pAction, pParms)
 				break
 			end switch
 			
@@ -491,7 +483,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			lDocText = ""
 
 		case else
-			lDocText = call_func(common_gen:rid(), { pAction, pParms, "" })
+			lDocText = common_gen:generate(pAction, pParms)
 	end switch
 
 	return lDocText
@@ -947,7 +939,8 @@ procedure main()
 		{ "m", 0,         "Define a macro",      { HAS_PARAMETER, "macro", HAS_CASE } },
 		{ "l", 0,         "Heading levels",      { HAS_PARAMETER, "num", HAS_CASE, ONCE } },
 		{ "M", 0,         "Show message",        { HAS_PARAMETER, "message", HAS_CASE } },
-		{ "f", "format",  "Output format (" & common_gen:names() & ")", { HAS_PARAMETER, "name", ONCE } },
+		{ "f", "format",  "Output format (" & common_gen:names() & ")", 
+		                                         { HAS_PARAMETER, "name", ONCE } },
 		{ "o", 0,         "Output directory",    { HAS_PARAMETER, "dir", HAS_CASE, ONCE } },
 		{ "t", 0,         "Template file",       { HAS_PARAMETER, "filename", HAS_CASE, ONCE } },
 		{ "d", 0,         "Template directory",  { HAS_PARAMETER, "dir", HAS_CASE, ONCE } },

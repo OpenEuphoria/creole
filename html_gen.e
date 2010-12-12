@@ -12,8 +12,6 @@ constant kHTML = {
 
 export integer use_span_for_color = 1
 
-with trace
-
 function html_generator(integer pAction, sequence pParms, object pContext = "")
 	sequence lHTMLText
 	sequence lSuffix
@@ -23,7 +21,6 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 	lHTMLText = ""
 
 	switch pAction do
-
 		case InternalLink then
 			if find('.', pParms[1]) = 0 then
 				lSuffix = ".html"
@@ -264,4 +261,23 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 	return lHTMLText
 end function
 
-common_gen:register("HTML", "html", routine_id("html_generator"))
+function default_template(sequence title, sequence context, sequence body)
+	return "<!DOCTYPE html \n" &
+		"  PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" &
+		"  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" &
+		"\n" &
+		"<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n" &
+		"\n" &
+		"<head>\n" &
+		"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n" & 
+		" <title>" & title & "</title>\n" &
+		" <link rel=\"stylesheet\" media=\"screen, projection, print\" type=\"text/css\" href=\"style.css\"/>\n" &
+		"<!-- source=\"" & context & "\" -->\n" &
+		"</head>\n" &
+		"<body>\n" & 
+		body &
+		"</body></html>"	
+end function
+
+common_gen:register("HTML", "html", routine_id("html_generator"), 
+	routine_id("default_template"))

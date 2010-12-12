@@ -7,7 +7,7 @@ namespace common_gen
 include std/sequence.e
 include std/text.e
 
-enum GEN_NAME, GEN_EXTENSION, GEN_RID
+enum GEN_NAME, GEN_EXTENSION, GEN_RID, GEN_DEFAULT_TEMPLATE_RID
 
 export sequence generators = {}
 export integer format = 0
@@ -27,10 +27,12 @@ end function
 --   * name - Name to display to user from pick list
 --   * ext - Extension to write files as
 --   * rid - Creole generate routine id
+--   * template_rid - Default template routine id
 --
 
-export procedure register(sequence name, sequence ext, integer rid)
-	generators = append(generators, { name, ext, rid })
+export procedure register(sequence name, sequence ext, integer rid, 
+			integer template_rid)
+	generators = append(generators, { name, ext, rid, template_rid })
 end procedure
 
 --**
@@ -82,6 +84,15 @@ end function
 -- Get the generator routine for the current generator/format
 --
 
-export function rid()
-	return generators[format][GEN_RID]
+export function generate(integer action, sequence params, object context = "")
+	return call_func(generators[format][GEN_RID], { action, params, context })
+end function
+
+--**
+-- Get the default template
+--
+
+export function default_template(sequence title, sequence context, sequence body)
+	return call_func(generators[format][GEN_DEFAULT_TEMPLATE_RID], {
+		title, context, body })
 end function
