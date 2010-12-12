@@ -16,19 +16,20 @@ include std/text.e
 include std/utils.e
 
 include creole.e
+include common_gen.e
 include html_gen.e
+
 include kanarie.e as kan
 
 sequence JSON_OPTS = PRETTY_DEFAULT
 JSON_OPTS[DISPLAY_ASCII] = 3
-
 
 -- Increment version number with each release, not really with each change
 -- in the SCM
 
 constant APP_VERSION = "1.0.0"
 
---sequence vDefaultExt
+integer vFormat = 0
 integer vVerbose = 0
 integer vQuiet = 0
 
@@ -47,16 +48,14 @@ sequence vPublishedDate
 sequence vQuickLink = {}
 
 sequence KnownWikis  = {
-	{ "WIKICREOLE",	"http://wikicreole.org/wiki/"},
-	{ "OHANA",      "http://wikiohana.net/cgi-bin/wiki.pl/"},
-	{ "WIKIPEDIA",  "http://wikipedia.org/wiki/"},
-	{ "OPENEU",     "http://openeuphoria.org/wiki/view.wc?page="},
-	{ "WIKI",       "http://openeuphoria.org/wiki/view.wc?page="}
+	{ "WIKICREOLE",	"http://wikicreole.org/wiki/" },
+	{ "OHANA",      "http://wikiohana.net/cgi-bin/wiki.pl/" },
+	{ "WIKIPEDIA",  "http://wikipedia.org/wiki/" },
+	{ "OPENEU",     "http://openeuphoria.org/wiki/view.wc?page=" },
+	{ "WIKI",       "http://openeuphoria.org/wiki/view.wc?page=" }
 }
 
------------------------------------------------------------------
 function fixup_seps(sequence pFileName)
------------------------------------------------------------------
 	ifdef WINDOWS then
 		return search:match_replace('/', pFileName, SLASH)
 	elsedef
@@ -64,9 +63,7 @@ function fixup_seps(sequence pFileName)
 	end ifdef
 end function
 
------------------------------------------------------------------
 function make_filename(sequence pBaseName, object pLinkDir = 0)
------------------------------------------------------------------
 	sequence lOutFile
 	sequence lFileParts
 	sequence lLinkDir
@@ -92,18 +89,14 @@ function make_filename(sequence pBaseName, object pLinkDir = 0)
 		lOutFile = lLinkDir & SLASH
 	end if
 	lOutFile &= pBaseName
-	lOutFile &= ".html"
+	lOutFile &= common_gen:extension()
 	
 	return fixup_seps(lOutFile)
-	
-	
 end function
 
 sequence vStatus = {}
 
------------------------------------------------------------------
 function generate_html(integer pAction, sequence pParms, object pContext)
------------------------------------------------------------------
 	sequence lHTMLText
 	integer lPos
 	integer lIdx
@@ -462,13 +455,13 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 				if length(lText) > 0 then
 					lHTMLText = "<font "
 					if length(lFontColor) > 0 then
-						lHTMLText &= "color=\"" & html_generator(Sanitize, lFontColor) & "\" "
+						lHTMLText &= "color=\"" & call_func(common_gen:rid(), { Sanitize, lFontColor, "" }) & "\" "
 					end if
 					if length(lFontFace) > 0 then
-						lHTMLText &= "face=\"" & html_generator(Sanitize, lFontFace) & "\" "
+						lHTMLText &= "face=\"" & call_func(common_gen:rid(), { Sanitize, lFontFace, "" }) & "\" "
 					end if
 					if length(lFontSize) > 0 then
-						lHTMLText &= "size=\"" & html_generator(Sanitize, lFontSize) & "\" "
+						lHTMLText &= "size=\"" & call_func(common_gen:rid(), { Sanitize, lFontSize, "" }) & "\" "
 					end if
 					lHTMLText &= ">"
 					lHTMLText &= parse_text(lText, 4) -- sanitized by parse_text
@@ -487,7 +480,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 					sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
 				
 			case else
-				lHTMLText = html_generator(pAction, pParms)
+				lHTMLText = call_func(common_gen:rid(), { pAction, pParms, "" })
 			break
 		end switch
 		
@@ -502,7 +495,7 @@ function generate_html(integer pAction, sequence pParms, object pContext)
 			break
 
 	case else
-			lHTMLText = html_generator(pAction, pParms)
+			lHTMLText = call_func(common_gen:rid(), { pAction, pParms, "" })
 			
 	end switch
 
@@ -752,9 +745,7 @@ function jsonWord( sequence pWord, sequence pSections )
 	return json
 end function
 
------------------------------------------------------------------
 function bmcleanup(sequence pBookMark)
------------------------------------------------------------------
 	sequence lText
 	sequence lSortText
 	sequence lDisplayText
@@ -796,24 +787,17 @@ function bmcleanup(sequence pBookMark)
 	-- Do a case-insensitive comparison
 	lSortText = lower(lText)
 	
-	
 	pBookMark = append(pBookMark, trim(lDisplayText))
 	pBookMark = append(pBookMark, trim(lSortText))
 	
 	return pBookMark
 end function
 
------------------------------------------------------------------
 function bmsort(sequence A, sequence B)
------------------------------------------------------------------
 	return compare(A[$], B[$])
 end function
 
-
-
------------------------------------------------------------------
 function bmdivide(sequence pOrigList)
------------------------------------------------------------------
 	sequence lDividedList = {}
 	integer lFirstChar
 	integer lPrevSlot = 0
@@ -842,9 +826,7 @@ function bmdivide(sequence pOrigList)
 	return lDividedList
 end function
 
------------------------------------------------------------------
 procedure Generate(sequence pFileName)
------------------------------------------------------------------
 	sequence lOutFile
 	sequence lBookMarks
 	sequence lFileParts
@@ -892,7 +874,7 @@ procedure Generate(sequence pFileName)
 	else
 		lOutFile &= "result"
 	end if
-	lOutFile &= ".html"
+	lOutFile &= common_gen:extension()
 	
 	lOutFile = fixup_seps(lOutFile)
 	pFileName = fixup_seps(pFileName)
@@ -956,11 +938,9 @@ procedure Generate(sequence pFileName)
 
 end procedure
 
------------------------------------------------------------------
 procedure main()
------------------------------------------------------------------
 	integer lDidSetTemplateDir = 0
-
+	
 	vPublishedDate = sprintf("%s\n", {datetime:format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
 	
 	object base_options = map:load_map( locate_file("creolehtml.opts") )
@@ -972,11 +952,12 @@ procedure main()
 		{ "A", 0,         "Enable macros",       { NO_PARAMETER,  HAS_CASE, ONCE } },
 		{ "m", 0,         "Define a macro",      { HAS_PARAMETER, "macro", HAS_CASE } },
 		{ "l", 0,         "Heading levels",      { HAS_PARAMETER, "num", HAS_CASE, ONCE } },
+		{ "M", 0,         "Show message",        { HAS_PARAMETER, "message", HAS_CASE } },
+		{ "f", "format",  "Output format (" & common_gen:names() & ")", { HAS_PARAMETER, "name", ONCE } },
 		{ "o", 0,         "Output directory",    { HAS_PARAMETER, "dir", HAS_CASE, ONCE } },
 		{ "t", 0,         "Template file",       { HAS_PARAMETER, "filename", HAS_CASE, ONCE } },
 		{ "d", 0,         "Template directory",  { HAS_PARAMETER, "dir", HAS_CASE, ONCE } },
 		{   0, "htmldoc", "Use span for colors", { NO_PARAMETER,  HAS_CASE, ONCE } },
-		{ "M", 0,         "Show message",        { HAS_PARAMETER, "message", HAS_CASE } },
 		{ "q", 0,         "Quiet",               { NO_PARAMETER,  HAS_CASE, ONCE } },
 		{ "v", 0,         "Verbose",             { NO_PARAMETER,  HAS_CASE, ONCE } },
 		{   0, "version", "Display version",     { VERSIONING, "CreoleHtml v" & APP_VERSION } },
@@ -1047,10 +1028,14 @@ procedure main()
 		vTemplateFile = kan:loadTemplateFromFile(templateFilename)
 		
 		if atom(vTemplateFile) then
-			printf(2,"\n*** Failed to load template from '%s'\n", { kan:getTemplateDirectory() & vTemplateFilename })
+			printf(2,"\n*** Failed to load template from '%s'\n", { 
+				kan:getTemplateDirectory() & vTemplateFilename })
 			abort(1)
 		end if
 	end if		
+	
+	-- Handle format (set default to HTML)
+	common_gen:set(map:get(opts, "format", "html"))
 
 	sequence files = map:get(opts, cmdline:EXTRAS, {})	
 	for i = 1 to length(files) do

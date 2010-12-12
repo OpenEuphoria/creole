@@ -1,18 +1,20 @@
 include std/text.e
 include std/search.e
 
+include common_gen.e
+
 constant kHTML = {
-				{"&", "&amp;"},
-				{"<", "&lt;"},
-				{">", "&gt;"}
-	}
+	{ "&", "&amp;" },
+	{ "<", "&lt;" },
+	{ ">", "&gt;" },
+	$
+}
 
 export integer use_span_for_color = 1
 
 with trace
-------------------------------------------------------------------------------
-global function html_generator(integer pAction, sequence pParms, object pContext = "")
-------------------------------------------------------------------------------
+
+function html_generator(integer pAction, sequence pParms, object pContext = "")
 	sequence lHTMLText
 	sequence lSuffix
 	sequence lNumText
@@ -261,3 +263,5 @@ global function html_generator(integer pAction, sequence pParms, object pContext
 
 	return lHTMLText
 end function
+
+common_gen:register("HTML", "html", routine_id("html_generator"))
