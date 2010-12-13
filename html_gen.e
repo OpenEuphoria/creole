@@ -503,7 +503,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 								lValue[2] = 2
 							end if
 						elsif equal(lParms[i][1], "spacer") then
-							lSpacer = search:match_replace("^", lParms[i][2], " ")
+							search:match_replace("^", lParms[i][2], " ")
 						
 						elsif equal(lParms[i][1], "start") then
 							lStartDepth = value(lParms[i][2])
