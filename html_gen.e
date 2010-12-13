@@ -83,9 +83,10 @@ function showTOC( sequence pContext, integer pLevel, integer pDepth, sequence pH
 end function
 
 function buildIndex( sequence pParms )
--- Create Index file
+	-- Create Index file
 	integer lGenerateSearch = 0
 	integer px = 1
+
 	while px <= length( pParms ) do
 		-- parse the arguments for the plugin
 		if equal( pParms[px][2], "search" ) then
@@ -103,14 +104,15 @@ function buildIndex( sequence pParms )
 	for i = 1 to length(lBookMarks) do
 		lBookMarks[i] = bmcleanup(lBookMarks[i])
 	end for
+
 	lBookMarks = custom_sort( routine_id("bmsort"), lBookMarks)
 	lBookMarks = bmdivide(lBookMarks)
 
 	lHtml &= "<h1>Subject and Routine Index</h1>\n" 
+
 	sequence entries
-	integer jj
+	integer jj = 0
 	
-	jj = 0
 	for i = 1 to length(lBookMarks) do
 		jj += 1
 		if jj > 9 then
@@ -133,7 +135,6 @@ function buildIndex( sequence pParms )
 									upper(lBookMarks[i][1][7][1]) & "</strong></a>&nbsp;&nbsp;<br />")
 		for j = 1 to length(lBookMarks[i]) do
 			sequence lEntry
-			integer pos
 			sequence htmlentry
 
 			lEntry = lBookMarks[i][j]
@@ -471,7 +472,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			end for
 			
 		case Plugin then
-			sequence lValue, lSpacer, lHere
+			sequence lValue, lHere
 			integer lInstance = pParms[4]
 
 			-- Extract the key/values, but don't parse for quoted text nor whitespace delims.
@@ -488,9 +489,9 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			
 			switch lParms[1][2] do
 				case "TOC" then
-					lValue = {0,2}
 					sequence lStartDepth = { 0, 0 }
-					lSpacer = ""
+					lValue = {0,2}
+
 					for i = 2 to length(lParms) do
 						if equal(lParms[i][1], "heading") then
 							if find(lParms[i][2], {"yes", "on", "show", "1"}) then
