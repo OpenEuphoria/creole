@@ -42,6 +42,10 @@ export function make_filename(sequence pBaseName, sequence ext, object pLinkDir 
 	if length(pBaseName) = 0 then
 		return ""
 	end if
+
+	if length(ext) and ext[1] != '.' then
+		ext = '.' & ext
+	end if
 	
 	lOutFile = ""
 	lFileParts = pathinfo(pBaseName)

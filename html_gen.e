@@ -19,6 +19,8 @@ constant kHTML = {
 	$
 }
 
+constant ext = "html"
+
 sequence JSON_OPTS = PRETTY_DEFAULT
 JSON_OPTS[DISPLAY_ASCII] = 3
 
@@ -48,7 +50,7 @@ function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpa
 					lHTMLText &= pSpacer
 				end for
 			end if
-			lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5],"") & 
+			lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5], ext, "") &
 						"#" & lHeadings[i][3] & "\">" &
 						lHeadings[i][2] & "</a></div>\n"
 			
@@ -243,9 +245,9 @@ function search(frm) {
 function indexEntryHref( sequence pBookMark )
 	sequence htmlentry = ""
 	if length(pBookMark[6]) > 0 then
-		htmlentry &= make_filename(filebase(pBookMark[6]),"") -- Containing file
+		htmlentry &= make_filename(filebase(pBookMark[6]), ext, "") -- Containing file
 	else
-		htmlentry &= make_filename(filebase(pBookMark[5]),"") -- Containing file
+		htmlentry &= make_filename(filebase(pBookMark[5]), ext, "") -- Containing file
 	end if
 	htmlentry &= "#"
 	htmlentry &= pBookMark[4] -- Bookmark name
@@ -526,7 +528,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 					lIdx = lPos - 1
 					while lIdx >= 1 do
 						if lHeadings[lIdx][1] = lHere[1] then
-							lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
+							lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5], ext, "") &
 									"#" & lHeadings[lIdx][3] & "\">" &
 									"Previous" & "</a>"
 							exit
@@ -535,7 +537,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 					end while
 					lHTMLText &= " "
 					
-					lHTMLText &= "<a href=\"" & make_filename(lHeadings[1][5],"") & 
+					lHTMLText &= "<a href=\"" & make_filename(lHeadings[1][5], ext, "") &
 							"#" & lHeadings[1][3] & "\">" &
 							"Up" & "</a>"
 					lHTMLText &= " "
@@ -543,7 +545,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 					lIdx = lPos + 1
 					while lIdx <= length(lHeadings) do
 						if lHeadings[lIdx][1] = lHere[1] then
-							lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5],"") & 
+							lHTMLText &= "<a href=\"" & make_filename(lHeadings[lIdx][5], ext, "") &
 									"#" & lHeadings[lIdx][3] & "\">" &
 									"Next" & "</a>"
 							exit
@@ -698,5 +700,5 @@ function default_template(sequence title, sequence context, sequence body)
 		"</body></html>"	
 end function
 
-common_gen:register("HTML", "html", routine_id("html_generator"), 
+common_gen:register("HTML", ext, routine_id("html_generator"),
 	routine_id("default_template"))
