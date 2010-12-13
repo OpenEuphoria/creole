@@ -241,7 +241,7 @@ end function
 
 function default_template(sequence title, sequence context, sequence body)
 	return `
-\documentclass[letter,openany]{book}
+\documentclass[letter,openany,twoside]{book}
 \usepackage{fixltx2e}
 \usepackage{tabularx}
 \usepackage{listings}
@@ -249,6 +249,15 @@ function default_template(sequence title, sequence context, sequence body)
 \usepackage{ulem}
 \usepackage[pagebackref=true,colorlinks]{hyperref}
 \usepackage[all]{hypcap}
+\usepackage[Lenny]{fncychap}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\slshape \leftmark}
+\fancyhead[RO]{\slshape \rightmark}
+\fancyfoot[LE]{\thepage}
+\fancyfoot[RO]{\thepage}
 
 % Set the default font to serif
 \renewcommand{\familydefault}{\sfdefault}
