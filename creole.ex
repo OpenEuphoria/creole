@@ -166,13 +166,13 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			lPage = pParms[1][lPos + 1 .. $]
 			for i = 1 to length(KnownWikis) do
 				if equal(lWiki, KnownWikis[i][1]) then
-					lDocText = sprintf("<a class=\"euwiki\" href=\"%s%s\">%s</a>", {
-						KnownWikis[i][2], lPage, pParms[2] 
-					})
+					lDocText = common_gen:generate(NormalLink, { KnownWikis[i][2] & lPage, pParms[2] })
 				end if
 			end for
 			
 			if length(lDocText) = 0 then
+				-- TODO: Create an InvalidWikiLink action or something
+				/*
 				lDocText = "<span class=\"euwiki_error\"><font color=\"red\">Interwiki link failed for "
 				for i = 1 to length(pParms) do
 					lDocText &= pParms[i]
@@ -181,6 +181,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 					end if
 				end for
 				lDocText &= "</font></span>"
+				*/
 			end if
 			
 		case Document then
@@ -332,9 +333,11 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			if vVerbose then
 				printf(1, "Plugin: %s\n", {lParms[1][2]}) 
 			end if
+			
 			switch lParms[1][2] do
+				case "BLAHBLAHBLAH" then
+				/*
 				case "TOC" then
-					
 					lValue = {0,2}
 					sequence lStartDepth = { 0, 0 }
 					lSpacer = ""
@@ -462,7 +465,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 					end if
 					
 					break
-				
+					
 				case "INDEX" then
 					lDocText = buildIndex( lParms )
 				
@@ -471,7 +474,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 					lHere = creole_parse(Get_CurrentHeading, , lInstance )
 					vQuickLink = append( vQuickLink, 
 						sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
-					
+				*/
 				case else
 					lDocText = common_gen:generate(pAction, pParms)
 				break

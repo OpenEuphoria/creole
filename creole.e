@@ -61,6 +61,7 @@ global enum     -- Action Codes for the Generator
 	Document,           -- defines a document
 	Bookmark,           -- define a bookmark
 	Sanitize,           -- Ensure input has no illegal characters
+	SanitizeURL,        -- Ensure URL has no illegal characters
 	PassThru,           -- Raw text is being asked for.
 	CamelCase,          -- Convert a CamelCase word to normal text
 	Plugin,             -- A plugin has been called for
@@ -1934,7 +1935,7 @@ function get_eucode(sequence pRawText, atom pFrom)
 						if length(trim(lColorSegments[i][2])) > 0 then
 							lText &= Generate_Final(ColorText,
 										{vCodeColors[lColorSegments[i][1]],
-										 Generate_Final(Sanitize, lColorSegments[i][2])})
+										 Generate_Final(Sanitize, { 1, lColorSegments[i][2] })})
 						else
 							lText &= lColorSegments[i][2]
 						end if
@@ -2230,9 +2231,9 @@ function get_nowiki(sequence pRawText, atom pFrom)
 	end if
 
 	if lType = 0 then
-		lText = Generate_Final(NoWikiBlock, {Generate_Final(Sanitize,pRawText[lStartPos .. lEndPos - 1])})
+		lText = Generate_Final(NoWikiBlock, {Generate_Final(Sanitize, { 1, pRawText[lStartPos .. lEndPos - 1] })})
 	else
- 		lText = Generate_Final(NoWikiInline, {Generate_Final(Sanitize, trim(pRawText[lStartPos .. lEndPos - 1]))})
+ 		lText = Generate_Final(NoWikiInline, {Generate_Final(Sanitize, { 0, trim(pRawText[lStartPos .. lEndPos - 1]) })})
 	end if
 
 
@@ -2270,7 +2271,7 @@ function get_linebroken(sequence pRawText, atom pFrom)
 	
 	lText = call_func(vParser_rid, {lText, 0})
 	
-	--Generate_Final(NoWikiBlock, {Generate_Final(Sanitize,pRawText[lStartPos .. lEndPos - 1])})
+	--Generate_Final(NoWikiBlock, {Generate_Final(Sanitize,{ 0, pRawText[lStartPos .. lEndPos - 1] })})
 
 	return {lNewPos-1, lText}
 end function
@@ -2354,12 +2355,12 @@ function get_link(sequence pRawText, atom pFrom)
 	end if
 
 	if length(lURL) > 0 then
-		lURL = Generate_Final(Sanitize, lURL)	
+		lURL = Generate_Final(SanitizeURL, { lURL })	
 		lPos = eu:find(':', lURL) + begins('/', lURL)
 		if lPos = 0 then
 			
 			-- Internal link.
-			lText = Generate_Final(InternalLink, {lURL, call_func(vParser_rid, {lDisplayText, 2})})
+			lText = Generate_Final(InternalLink, { lURL, call_func(vParser_rid, { lDisplayText, 2 })})
 
 		else
 			if match("://", lURL) > 0 or match("mailto:", lURL) = 1 or begins('/', lURL) then
@@ -2444,7 +2445,7 @@ function get_quoted(sequence pRawText, atom pFrom)
 		lEndPos += 1
 		
 		if pRawText[lEndPos] = ']' then
-			lName = Generate_Final(Sanitize,trim(pRawText[lStartPos .. lEndPos - 1]))
+			lName = Generate_Final(Sanitize,{ 0, trim(pRawText[lStartPos .. lEndPos - 1]) })
 			exit
 		end if
 		
@@ -2457,7 +2458,7 @@ function get_quoted(sequence pRawText, atom pFrom)
 			if lAltEnd != 0 then
 				lEndPos = lAltEnd
 			end if
-			lName = Generate_Final(Sanitize,trim(pRawText[lStartPos .. lEndPos - 1]))
+			lName = Generate_Final(Sanitize, { 0, trim(pRawText[lStartPos .. lEndPos - 1]) })
 			exit
 		end if
 	end while
@@ -3253,7 +3254,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 					lExtract = get_camel_case(pRawText, lPos)
 					if lExtract[1] > 0 then
 						-- Found a CamelCase word.
-						lFinalForm &= Generate_Final(Sanitize,lText)
+						lFinalForm &= Generate_Final(Sanitize, { 0, lText })
 						lFinalForm &= Generate_Final(InternalLink, {lExtract[2], Generate_Final(CamelCase,lExtract[2])})
 						lPos = lExtract[1]
 						lPrevIsWord = lIsWord
@@ -3269,7 +3270,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 
 		lPrevIsWord = lIsWord
 		if length(lText) > 0 then
-			lText = Generate_Final(Sanitize,lText)
+			lText = Generate_Final(Sanitize, { 0, lText })
 
 			-- Check for short-form urls.
 			if eu:find('.', lText) then
@@ -3697,19 +3698,19 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 
 		if lChar > 0 then
 			if length(lFinalForm) = 0 then
-				lFinalForm &= Generate_Final(Sanitize, {lChar})
+				lFinalForm &= Generate_Final(Sanitize, { 0, { lChar } })
 			elsif lChar = ' ' then
 				if eu:find(lFinalForm[$], " \t\n") = 0 then
 					lFinalForm &= ' '
 				end if
 			else
-				lFinalForm &= Generate_Final(Sanitize,{lChar})
+				lFinalForm &= Generate_Final(Sanitize, {0, { lChar } })
 			end if
 		end if
 
 
 	end while
-	lFinalForm &= Generate_Final(Sanitize, lText)
+	lFinalForm &= Generate_Final(Sanitize, { 0, lText })
 
 	if not pSpan or eu:find(TAG_STARTPARA, lFinalForm) then
 		-- Remove any empty paragraphs.

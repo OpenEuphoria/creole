@@ -195,7 +195,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			end if
 			
 		case Sanitize then
-			lHTMLText = pParms
+			lHTMLText = pParms[2]
 			for i = 1 to length(kHTML) do
 				lHTMLText = match_replace(kHTML[i][1], lHTMLText, kHTML[i][2])
 			end for

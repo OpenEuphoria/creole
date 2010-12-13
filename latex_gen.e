@@ -47,6 +47,7 @@ constant action_names = {
 	"Document",           -- defines a document
 	"Bookmark",           -- define a bookmark
 	"Sanitize",           -- Ensure input has no illegal characters
+	"SanitizeURL",        -- Ensure URL has no illegal characters
 	"PassThru",           -- Raw text is being asked for.
 	"CamelCase",          -- Convert a CamelCase word to normal text
 	"Plugin",             -- A plugin has been called for
@@ -65,15 +66,29 @@ constant sectioning = {
 	"par\\textbf"
 }
 
+constant replacements = {
+	'\\', "{\\textbackslash}",
+	'$', "{\\textdollar}",
+	'_', "{\\textunderscore}",
+	'^', "{\\textasciicircum}",
+	$
+}
+
 sequence table_cells = {}, table_rows = {}
 
 function escape(sequence val)
 	integer i = 1
 	
 	while i <= length(val) do
-		if find(val[i], "_$#\\") then
+		if find(val[i], "#&%") then
 			val = insert(val, '\\', i)
 			i += 1
+		else
+			integer tmp = find(val[i], replacements)
+			if tmp then
+				val = replace(val, replacements[tmp+1], i)
+				i += length(tmp + 1)
+			end if
 		end if
 		
 		i += 1
@@ -83,29 +98,24 @@ function escape(sequence val)
 end function
 
 function generator(integer action, sequence params, object context)
-	sequence doc_text
-
-	doc_text = ""
+	sequence doc_text = ""
 	
 	switch action do
+		case SanitizeURL then
+			doc_text = params[1]
+
 		case InternalLink then
-			display({ "InternalLink", params })
-			
-			if length(params[2]) and length(1) then
-				--doc_text = sprintf("%s in section \\ref{sec:%s}", { escape(params[2]), params[1] })
-			end if
+			display({ "internal link", params })
+			doc_text = "internal link section \\ref{sec:" & params[1] & "}"
 
 		case QualifiedLink then
-			--display({ "QualifiedLink", params })
-			if sequence(params) and length(params) > 2 then
-				doc_text = sprintf(" section \\ref{sec:%s}", { params[2] })
-			end if
+			doc_text = " section \\ref{sec:" & params[2] & "}"
 
 		case InterWikiLink then
-			--display({ "InterWikiLink", params })
+			doc_text = "% InterWikiLink " & params[2] & "\n"
 
 		case NormalLink then
-			--display({ "NormalLink", params })
+			doc_text = "\\href{" & params[1] & "}{" & escape(params[2]) & "}"
 
 		case InternalImage then
 
@@ -114,7 +124,7 @@ function generator(integer action, sequence params, object context)
 		case NormalImage then
 
 		case Paragraph, Division then
-			doc_text = splice("\\par \n", trim(params), 5)
+			doc_text = splice("\\par \n\n", trim(params), 5)
 			
 		case Bookmark then
 			doc_text = sprintf("\\label{sec:%s}\n", { params })
@@ -138,7 +148,7 @@ function generator(integer action, sequence params, object context)
 			doc_text = sprintf("\\textbf{%s}", { params[1] })
 
 		case MonoText then
-			doc_text = sprintf("\\texttt{%s}", { params[1] })
+			doc_text = "\\texttt{" & params[1] & "}"
 
 		case UnderlineText then
 			doc_text = sprintf("\\uline{%s}", { params[1] })
@@ -159,11 +169,17 @@ function generator(integer action, sequence params, object context)
 			doc_text = params[2]
 
 		case CodeExample then
-			doc_text = sprintf("\\lstset{language=euphoria,numbers=left,caption=}" &
+			sequence numbers = "none"
+			if length(find_all('\n', params[1])) > 4 then
+				numbers = "left"
+			end if
+
+			doc_text = sprintf("\\lstset{language=Euphoria,numbers=%s,caption=}" &
 				"\\begin{lstlisting}\n" &
 				"%s\n" &
 				"\\end{lstlisting}\n", 
 			{
+				numbers,
 				params[1]
 			})
 
@@ -171,16 +187,16 @@ function generator(integer action, sequence params, object context)
 			sequence def = ""
 			
 			if length(table_rows) then
-				def = repeat_pattern("l|", length(table_rows[1]))
+				def = repeat_pattern("X|", length(table_rows[1]))
 			end if
 				
-			doc_text = sprintf("\\begin{tabular}{|%s}\n\\hline%s\n\\end{tabular}\n", { 
+			doc_text = sprintf("\\begin{tabularx}{\\linewidth}{|%s}\n\\hline\n%s\n\\end{tabularx}\n", { 
 				def, params[1] })
 			
 			table_rows = {}
 
 		case HeaderRow then
-			doc_text = sprintf("%s \\\\ {\\hline width 3pt}\n", { params[1][1..$ - 2] })
+			doc_text = sprintf("%s \\\\\\hline\n", { params[1][1..$ - 2] })
 			
 			table_rows = append(table_rows, table_cells)
 			table_cells = {}
@@ -232,8 +248,13 @@ function generator(integer action, sequence params, object context)
 		case PassThru then
 			
 		case Sanitize then
-			doc_text = escape(params)
-		
+			if params[1] then
+				-- We are sanitizing a eudoc, don't do it
+				doc_text = params[2]
+			else
+				doc_text = escape(params[2])
+			end if
+	
 		case CamelCase then
 			
 		case Plugin then
@@ -261,25 +282,10 @@ function generator(integer action, sequence params, object context)
 end function
 
 function default_template(sequence title, sequence context, sequence body)
-	/*
-	-- Work around for not being able to properly escape _ in all cases, i.e.
-	-- when cmd_parse or similar appears in a normal paragraph, its sent to the
-	-- sanitize function as "cmd" and then "parse", never as "cmd_parse".
-	integer i = 1
-	while i < length(body) do
-		if (find(body[i], "_#")) and (i = 1 or body[i - 1] != '\\') then
-			body = insert(body, '\\', i)
-			
-			i += 1
-		end if
-		
-		i += 1
-	end while
-	*/
-	
 	return `
 \documentclass[letter]{book}
 \usepackage{fixltx2e}
+\usepackage{tabularx}
 \usepackage{listings}
 \usepackage{color}
 \usepackage{ulem}
@@ -290,15 +296,22 @@ function default_template(sequence title, sequence context, sequence body)
 \definecolor{listinggray}{gray}{0.99}
 \definecolor{stringgray}{rgb}{0.2,0.2,1.0}
 \definecolor{keyword}{rgb}{0.05,0.35,0.05}
-\lstset{backgroundcolor=\color{listinggray},rulecolor=\color{black}}
-\lstset{morekeywords={euphoria,case,switch,namespace,public,export,override}}
-\lstset{basicstyle=\ttfamily\scriptsize,frame=single,captionpos=b,stringstyle=\ttfamily\color{stringgray}}
-\lstset{keywordstyle=\color{keyword},numberstyle=\tiny}
+\lstset{
+	backgroundcolor=\color{listinggray},
+	rulecolor=\color{black},
+	basicstyle=\ttfamily\scriptsize,
+	frame=single,
+	captionpos=b,
+	stringstyle=\ttfamily\color{stringgray},
+	keywordstyle=\color{keyword},
+	numberstyle=\tiny
+}
 
 \title{` & title & `}
 \author{OpenEuphoria Group}
 \maketitle
 
+\setcounter{tocdepth}{1}
 \tableofcontents
 
 ` & body & `
