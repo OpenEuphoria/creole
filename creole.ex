@@ -39,21 +39,11 @@ sequence vStatus = {}
 function generate_doc(integer pAction, sequence pParms, object pContext)
 	sequence lDocText
 	integer lPos
-	integer lIdx
-	integer lInstance
 	integer lData
-	integer lDepth
-	sequence lSuffix
 	sequence lWiki
 	sequence lPage
-	sequence lParms
 	object lHeadings
-	object lValue
-	sequence lSpacer
-	sequence lHere
 	sequence lElements
-	integer lLookingNext
-	integer lSkipping
 	integer lThisElement
 	sequence lThisFile
 	sequence lThisContext
@@ -67,13 +57,8 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 	sequence lTOCFile
 	sequence lHomeFile
 	integer lThisLevel = 0
-	sequence lFontColor
-	sequence lFontSize
-	sequence lFontFace
-	sequence lText
 
 	lDocText = ""
-	lSpacer = ""
 
 	if vVerbose then
 		lThisFile = creole_parse(Get_Context)		
@@ -91,14 +76,14 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			lPage = pParms[1][lPos + 1 .. $]
 			for i = 1 to length(KnownWikis) label "wikisearch" do
 				if equal(lWiki, KnownWikis[i][1]) then
-					lDocText = common_gen:generate(NormalLink, { KnownWikis[i][2] & lPage, pParms[2] })
+					lDocText = common_gen:generate(NormalLink, { KnownWikis[i][2] & lPage, pParms[2] }, pContext)
 
 					exit "wikisearch"
 				end if
 			end for
 			
 			if length(lDocText) = 0 then
-				lDocText = common_gen:generate(InterWikiLinkError, pParms)
+				lDocText = common_gen:generate(InterWikiLinkError, pParms, pContext)
 			end if
 			
 		case Document then
@@ -126,8 +111,6 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			end for
 			
 			if sequence(vTemplateFile) then
-				lLookingNext = 0
-				lSkipping = 0
 				lNextPageFile = {{},{}}
 				lNextChapFile = {{},{}}
 				lPrevPageFile = {{},{}}
@@ -157,7 +140,6 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 				
 				-- Now we look for the next page and next chapter files.
 				for i = lThisElement + 1 to length(lElements) do
-					lIdx = i
 					if lElements[i][1] != 'h' then
 						continue
 					end if
@@ -238,7 +220,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			end if
 
 		case else
-			lDocText = common_gen:generate(pAction, pParms)
+			lDocText = common_gen:generate(pAction, pParms, pContext)
 	end switch
 
 	return lDocText
@@ -307,7 +289,7 @@ procedure Generate(sequence pFileName)
 	vCurrentContext = pFileName
 	
 	if vVerbose then
-		object VOID = creole_parse(Set_Option, CO_Verbose )
+		creole_parse(Set_Option, CO_Verbose )
 	end if
 	
 	lOutText = creole_parse(lContent, routine_id("generate_doc"), vCurrentContext)
