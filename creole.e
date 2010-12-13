@@ -1,6 +1,9 @@
 --
 -- Creole Markup
 --
+
+namespace creole
+
 ifdef UNITTEST then
 include std/unittest.e
 end ifdef
@@ -15,6 +18,7 @@ include std/types.e
 include std/sort.e
 include std/map.e
 include std/filesys.e
+
 include euphoria/syncolor.e
 
 object gDebug gDebug = 0
@@ -3704,7 +3708,7 @@ global function parse_text(sequence pRawText, integer pSpan = 0)
 					lFinalForm &= ' '
 				end if
 			else
-				lFinalForm &= Generate_Final(Sanitize, {0, { lChar } })
+				lFinalForm &= Generate_Final(Sanitize, { 0, { lChar } })
 			end if
 		end if
 

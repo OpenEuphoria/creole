@@ -4,6 +4,8 @@
 
 namespace common_gen
 
+include std/filesys.e
+include std/search.e
 include std/sequence.e
 include std/text.e
 
