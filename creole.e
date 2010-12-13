@@ -17,18 +17,18 @@ include std/map.e
 include std/filesys.e
 include euphoria/syncolor.e
 
-
 object gDebug gDebug = 0
 global enum     -- Action Codes for the Generator
-	HostID,             -- id of application hosting this parser
+	HostID,             -- (1) id of application hosting this parser
 	OptReparseHeadings, -- "" don't reparse, anything then reparse.
 	InternalLink,       -- internal link
 	QualifiedLink,      -- A link with a file name and an anchor point within that file
-	InterWikiLink,      -- interwiki link
+	InterWikiLink,      -- Inter wiki link
+	InterWikiLinkError, -- Inter wiki link w/o a valid definition
 	NormalLink,         -- normal link
 	InternalImage,      -- internal image
 	InterWikiImage,     -- interwiki image
-	NormalImage,        -- normal image
+	NormalImage,        -- (10) normal image
 	Heading,            -- headings
 	OrderedList,        -- An ordered (numbered) list
 	UnorderedList,      -- An unordered (bullet) list
@@ -38,7 +38,7 @@ global enum     -- Action Codes for the Generator
 	MonoText,           -- monospace font text
 	UnderlineText,      -- underlined text
 	Superscript,        -- superscripted text
-	Subscript,          -- subscripted text
+	Subscript,          -- (20) subscripted text
 	StrikeText,         -- striked out text
 	InsertText,         -- Inserted text
 	ColorText,          -- colored text
@@ -48,7 +48,7 @@ global enum     -- Action Codes for the Generator
 	HeaderCell,         -- table header cell
 	NormalRow,          -- table row
 	NormalCell,         -- table cell
-	NonBreakSpace,      -- non-breaking space
+	NonBreakSpace,      -- (30) non-breaking space
 	ForcedNewLine,      -- break the line now
 	HorizontalLine,     -- a line across the display
 	NoWikiBlock,        -- block style no wiki parsed text
@@ -58,7 +58,7 @@ global enum     -- Action Codes for the Generator
 	EndIndent,          -- End the current indentation level
 	Paragraph,          -- defines a paragraph
 	Division,           -- defines a division
-	Document,           -- defines a document
+	Document,           -- (40) defines a document
 	Bookmark,           -- define a bookmark
 	Sanitize,           -- Ensure input has no illegal characters
 	SanitizeURL,        -- Ensure URL has no illegal characters
@@ -68,7 +68,7 @@ global enum     -- Action Codes for the Generator
 	ContextChange,		-- A new !!CONTEXT: record found.
 	Comment,			-- A comment
 	Quoted,				-- A quoted section
-	LastActionCode
+	LastActionCode      -- (50)
 
 global enum     -- Action Codes for the Creole
 	Get_Headings,       -- returns all the headings and their bookmarks

@@ -1,5 +1,6 @@
 #!/usr/bin/env eui
 
+include std/console.e
 include std/cmdline.e
 include std/datetime.e
 include std/error.e
@@ -63,11 +64,9 @@ sequence vPublishedDate
 sequence vQuickLink = {}
 
 sequence KnownWikis  = {
-	{ "WIKICREOLE",	"http://wikicreole.org/wiki/" },
-	{ "OHANA",      "http://wikiohana.net/cgi-bin/wiki.pl/" },
 	{ "WIKIPEDIA",  "http://wikipedia.org/wiki/" },
-	{ "OPENEU",     "http://openeuphoria.org/wiki/view.wc?page=" },
-	{ "WIKI",       "http://openeuphoria.org/wiki/view.wc?page=" }
+	{ "C2",         "http://c2.com/cgi/wiki?" },
+	$
 }
 
 function fixup_seps(sequence pFileName)
@@ -164,24 +163,16 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			lPos = find(':', pParms[1])
 			lWiki = upper(pParms[1][1 .. lPos - 1])
 			lPage = pParms[1][lPos + 1 .. $]
-			for i = 1 to length(KnownWikis) do
+			for i = 1 to length(KnownWikis) label "wikisearch" do
 				if equal(lWiki, KnownWikis[i][1]) then
 					lDocText = common_gen:generate(NormalLink, { KnownWikis[i][2] & lPage, pParms[2] })
+
+					exit "wikisearch"
 				end if
 			end for
 			
 			if length(lDocText) = 0 then
-				-- TODO: Create an InvalidWikiLink action or something
-				/*
-				lDocText = "<span class=\"euwiki_error\"><font color=\"red\">Interwiki link failed for "
-				for i = 1 to length(pParms) do
-					lDocText &= pParms[i]
-					if i < length(pParms) then
-						lDocText &= ", "
-					end if
-				end for
-				lDocText &= "</font></span>"
-				*/
+				lDocText = common_gen:generate(InterWikiLinkError, pParms)
 			end if
 			
 		case Document then

@@ -14,6 +14,7 @@ codecolors = {"#330033", "#FF0055","#0000FF","#9900CC","#00CC33","#99CC33","#AA1
 wikis = {{"WIKICREOLE","http://wikicreole.org/wiki/"},
          {"OHANA",     "http://wikiohana.net/cgi-bin/wiki.pl/"},
          {"WIKIPEDIA", "http://wikipedia.org/wiki/"},
+         {"C2",        "http://c2.com/cgi-bin/wiki?"},
          {"OPENEU",    "http://openeuphoria.org/wiki/view.wc?page="},
          {"WIKI",      "http://openeuphoria.org/wiki/view.wc?page="},
          {"TICKET",    "http://openeuphoria.org/ticket/view.wc?id="},

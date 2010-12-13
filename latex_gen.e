@@ -5,58 +5,6 @@ include std/sequence.e
 
 include common_gen.e
 
-constant action_names = {
-	"HostID",             -- id of application hosting this parser
-	"OptReparseHeadings", -- "" don't reparse, anything then reparse.
-	"InternalLink",       -- internal link
-	"QualifiedLink",      -- A link with a file name and an anchor point within that file
-	"InterWikiLink",      -- interwiki link
-	"NormalLink",         -- normal link
-	"InternalImage",      -- internal image
-	"InterWikiImage",     -- interwiki image
-	"NormalImage",        -- normal image
-	"Heading",            -- headings
-	"OrderedList",        -- An ordered (numbered) list
-	"UnorderedList",      -- An unordered (bullet) list
-	"ListItem",           -- An item in a list
-	"ItalicText",         -- italized text
-	"BoldText",           -- bolded text
-	"MonoText",           -- monospace font text
-	"UnderlineText",      -- underlined text
-	"Superscript",        -- superscripted text
-	"Subscript",          -- subscripted text
-	"StrikeText",         -- striked out text
-	"InsertText",         -- Inserted text
-	"ColorText",          -- colored text
-	"CodeExample",        -- program code example
-	"TableDef",           -- entire table
-	"HeaderRow",          -- table header row
-	"HeaderCell",         -- table header cell
-	"NormalRow",          -- table row
-	"NormalCell",         -- table cell
-	"NonBreakSpace",      -- non-breaking space
-	"ForcedNewLine",      -- break the line now
-	"HorizontalLine",     -- a line across the display
-	"NoWikiBlock",        -- block style no wiki parsed text
-	"NoWikiInline",       -- inline style no wiki parsed text
-	"DefinitionList",     -- A set of definitions
-	"BeginIndent",        -- Start a new indentation level
-	"EndIndent",          -- End the current indentation level
-	"Paragraph",          -- defines a paragraph
-	"Division",           -- defines a division
-	"Document",           -- defines a document
-	"Bookmark",           -- define a bookmark
-	"Sanitize",           -- Ensure input has no illegal characters
-	"SanitizeURL",        -- Ensure URL has no illegal characters
-	"PassThru",           -- Raw text is being asked for.
-	"CamelCase",          -- Convert a CamelCase word to normal text
-	"Plugin",             -- A plugin has been called for
-	"ContextChange",		-- A new !!CONTEXT: record found.
-	"Comment",			-- A comment
-	"Quoted",				-- A quoted section
-	"LastActionCode"
-}
-
 constant sectioning = {
 	"part",
 	"chapter",

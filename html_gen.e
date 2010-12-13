@@ -1,3 +1,4 @@
+include std/console.e
 include std/text.e
 include std/search.e
 
@@ -37,14 +38,9 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			end if
 			lHTMLText = "<a href=\"" & pParms[1] & lSuffix & '#' & pParms[2] & "\">" & pParms[3] & "</a>"
 
-		case InterWikiLink then
+		case InterWikiLinkError then
 			lHTMLText = "<font color=\"#FF0000\" background=\"#000000\">Interwiki link failed for "
-			for i = 1 to length(pParms) do
-				lHTMLText &= pParms[i]
-				if i < length(pParms) then
-					lHTMLText &= ", "
-				end if
-			end for
+			lHTMLText &= pParms[2]
 			lHTMLText &= "</font>"
 
 		case NormalLink then
@@ -196,6 +192,12 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			
 		case Sanitize then
 			lHTMLText = pParms[2]
+			for i = 1 to length(kHTML) do
+				lHTMLText = match_replace(kHTML[i][1], lHTMLText, kHTML[i][2])
+			end for
+
+		case SanitizeURL then
+			lHTMLText = pParms[1]
 			for i = 1 to length(kHTML) do
 				lHTMLText = match_replace(kHTML[i][1], lHTMLText, kHTML[i][2])
 			end for
