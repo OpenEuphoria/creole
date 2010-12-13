@@ -927,7 +927,7 @@ procedure main()
 	
 	vPublishedDate = sprintf("%s\n", {datetime:format(now_gmt(), "%Y-%m-%d %H:%M UTC")})
 	
-	object base_options = map:load_map( locate_file("creolehtml.opts") )
+	object base_options = map:load_map( locate_file("creole.opts") )
 	if map(base_options) then
 		KnownWikis = map:get( base_options, "wikis", KnownWikis)
 	end if

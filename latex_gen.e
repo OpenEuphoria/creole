@@ -105,14 +105,13 @@ function generator(integer action, sequence params, object context)
 			doc_text = params[1]
 
 		case InternalLink then
-			display({ "internal link", params })
-			doc_text = "internal link section \\ref{sec:" & params[1] & "}"
+			doc_text = params[2] & " (\\ref{" & params[1] & "})"
 
 		case QualifiedLink then
-			doc_text = " section \\ref{sec:" & params[2] & "}"
+			doc_text = "\\hyperref[" & params[2] & "]{" & escape(params[3]) & "}"
 
 		case InterWikiLink then
-			doc_text = "% InterWikiLink " & params[2] & "\n"
+			doc_text = "InterWikiLink % InterWikiLink " & params[2] & "\n"
 
 		case NormalLink then
 			doc_text = "\\href{" & params[1] & "}{" & escape(params[2]) & "}"
@@ -124,10 +123,21 @@ function generator(integer action, sequence params, object context)
 		case NormalImage then
 
 		case Paragraph, Division then
-			doc_text = splice("\\par \n\n", trim(params), 5)
+			-- We want the ability to call trim and make sure we are going to be
+			-- outputting data before outputting an empty paragraph. Creole sends
+			-- a {-1} for the Paragraph action to see what the beginning and ending
+			-- of the paragraph is going to be. Thus we have this special case.
+			if equal(params, {-1}) then
+				doc_text = "\\par " & params & "\n\n"
+			else
+				params = trim(params)
+				if length(params) then
+					doc_text = sprintf("\\par %s\n\n", { params })
+				end if
+			end if
 			
 		case Bookmark then
-			doc_text = sprintf("\\label{sec:%s}\n", { params })
+			doc_text = sprintf("\\label{%s}\n", { params })
 
 		case OrderedList then
 			doc_text = "\\begin{enumerate}\n" & params & "\\end{enumerate}\n"
@@ -283,28 +293,35 @@ end function
 
 function default_template(sequence title, sequence context, sequence body)
 	return `
-\documentclass[letter]{book}
+\documentclass[letter,openany]{book}
 \usepackage{fixltx2e}
 \usepackage{tabularx}
 \usepackage{listings}
 \usepackage{color}
 \usepackage{ulem}
-\usepackage{hyperref}
+\usepackage[pagebackref=true,colorlinks]{hyperref}
 \usepackage[all]{hypcap}
+
+% Set the default font to serif
+\renewcommand{\familydefault}{\sfdefault}
+
 \begin{document}
 
 \definecolor{listinggray}{gray}{0.99}
 \definecolor{stringgray}{rgb}{0.2,0.2,1.0}
 \definecolor{keyword}{rgb}{0.05,0.35,0.05}
-\lstset{
-	backgroundcolor=\color{listinggray},
-	rulecolor=\color{black},
-	basicstyle=\ttfamily\scriptsize,
-	frame=single,
-	captionpos=b,
-	stringstyle=\ttfamily\color{stringgray},
-	keywordstyle=\color{keyword},
-	numberstyle=\tiny
+\lstset{%
+	showspaces=false,%
+	showtabs=false,%
+	showstringspaces=false,%
+	backgroundcolor=\color{listinggray},%
+	rulecolor=\color{black},%
+	basicstyle=\ttfamily\scriptsize,%
+	frame=single,%
+	captionpos=b,%
+	stringstyle=\ttfamily\color{stringgray},%
+	keywordstyle=\color{keyword},%
+	numberstyle=\tiny%
 }
 
 \title{` & title & `}
