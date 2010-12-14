@@ -251,8 +251,12 @@ function default_template(sequence title, sequence context, sequence body)
 \usepackage[all]{hypcap}
 \usepackage[Lenny]{fncychap}
 \usepackage{fancyhdr}
+\usepackage{vpage}
+%\usepackage[titles]{tocloft}
+\usepackage{graphicx}
+\usepackage{fix-cm}
 
-\pagestyle{fancy}
+\pagestyle{empty}
 \fancyhf{}
 \fancyhead[LE]{\slshape \leftmark}
 \fancyhead[RO]{\slshape \rightmark}
@@ -262,8 +266,6 @@ function default_template(sequence title, sequence context, sequence body)
 % Set the default font to serif
 \renewcommand{\familydefault}{\sfdefault}
 
-\begin{document}
-
 \definecolor{listinggray}{gray}{0.99}
 \definecolor{stringgray}{rgb}{0.2,0.2,1.0}
 \definecolor{keyword}{rgb}{0.05,0.35,0.05}
@@ -271,9 +273,10 @@ function default_template(sequence title, sequence context, sequence body)
 	showspaces=false,%
 	showtabs=false,%
 	showstringspaces=false,%
+	tabsize=4,%
 	backgroundcolor=\color{listinggray},%
 	rulecolor=\color{black},%
-	basicstyle=\ttfamily\scriptsize,%
+	basicstyle=\ttfamily\small,%
 	frame=single,%
 	captionpos=b,%
 	stringstyle=\ttfamily\color{stringgray},%
@@ -281,12 +284,30 @@ function default_template(sequence title, sequence context, sequence body)
 	numberstyle=\tiny%
 }
 
+\begin{document}
+
+\frontmatter
 \title{` & title & `}
 \author{OpenEuphoria Group}
-\maketitle
+%\maketitle
+{\centering%
+  %\includegraphics{300px-Logo-Logotype-boxed-oV2-R0.png}
+  \includegraphics{300px-mongoose-head-colour-V2-R0.png}%
+  \par\vspace*{48pt}%
+  \includegraphics{300px-Logo-Logotype-orange-V2-R0.png}%
+  %\vspace*{64pt}%
+  \par{\fontsize{28}{36}\selectfont Version 4.0}%
+  \vspace*{90pt}%
+  \par{\fontsize{48}{58}\selectfont User Manual}%
+  %
+  \newpage%
+}
 
 \setcounter{tocdepth}{1}
 \tableofcontents
+
+\pagestyle{fancy}
+\mainmatter
 
 ` & body & `
 
