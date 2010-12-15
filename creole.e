@@ -263,7 +263,7 @@ procedure init()
 	vProtocols = {
 				"HTTP:",
 				"FTP:",
-				-- "FILE:", -- causes problems more than solves
+				"FILE:",
 				"HTTPS:",
 				"SVN:",
 				"GOPHER:",
