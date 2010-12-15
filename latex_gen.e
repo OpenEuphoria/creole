@@ -190,6 +190,7 @@ function generator(integer action, sequence params, object context)
 			})
 
 		case NoWikiInline then
+			doc_text = "\\texttt{" & params[1] & "}"
 
 		case HostID then
 			doc_text = ""
@@ -198,6 +199,12 @@ function generator(integer action, sequence params, object context)
 			doc_text = ""
 
 		case DefinitionList then
+			doc_text = "\\begin{description}"
+			for i = 1 to length(params) do
+				doc_text &= "\\item[" & params[i][1] & "] \\hfill \\\\\n" &
+					params[i][2] & "\n"
+			end for
+			doc_text &= "\\end{description}\n"
 
 		case BeginIndent then
 			
@@ -227,6 +234,9 @@ function generator(integer action, sequence params, object context)
 			doc_text = sprintf("%% %s\n", { params })
 									
 		case Quoted then
+			doc_text = "\\begin{quotation}\n\\hrule\\vspace*{6pt}\n" & trim(params[2]) &
+				" \\textemdash \\textit{" & trim(params[1]) & "} " &
+				"\\vspace*{6pt}\\hrule\n\\end{quotation}\n"
 									
 		case else
 			doc_text = sprintf("[BAD ACTION CODE %d]", action)
