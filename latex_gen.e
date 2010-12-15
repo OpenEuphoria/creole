@@ -174,8 +174,10 @@ function generator(integer action, sequence params, object context)
 			table_cells = append(table_cells, params[1])
 
 		case NonBreakSpace then
+			doc_text = `\ `
 
 		case ForcedNewLine then
+			doc_text = " \\\\ \n"
 
 		case HorizontalLine then
 			doc_text = "\n\\hspace{5pt}\n\\hrule\n\\hspace{5pt}\n\n"
