@@ -41,8 +41,11 @@ function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpa
 			
 		end if
 		lHeadingContext[lHeadingDepth] += 1
-		
-		if showTOC( pHere, pLevel, pDepth, lHeadingContext ) then
+		sequence lHere = pHere
+		if not length( lHere ) then
+			lHere = lHeadingContext
+		end if
+		if showTOC( lHere, pLevel, pDepth, lHeadingContext ) then
 		
 			lHTMLText &= "<div class=\"toc_" & sprint(lHeadings[i][1]) & "\">"
 			if length(pSpacer) > 0 then
@@ -53,7 +56,6 @@ function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpa
 			lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5], ext, "") &
 						"#" & lHeadings[i][3] & "\">" &
 						lHeadings[i][2] & "</a></div>\n"
-			
 		end if
 	end for
 	lHTMLText &= "</div>\n"
@@ -63,7 +65,13 @@ end function
 
 function showTOC( sequence pContext, integer pLevel, integer pDepth, sequence pHeadings )
 	-- check to see if we should be showing the TOC link for this heading
-	if length( pContext ) < pLevel then
+	if length( pHeadings ) < pLevel then
+		-- heading is shallower that we're going to show
+		return 0
+	end if
+	
+	if length( pHeadings ) > pDepth then
+		-- heading goes deeper than we're going to show
 		return 0
 	end if
 	
@@ -514,8 +522,10 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 						end if
 					end for
 					
-					lHere = creole_parse(Get_CurrentLevels, , { lDepth, lLevel })
-					lHTMLText = buildTOC( lLevel, lDepth, lHere )
+					-- Use a Context of {}, so any section is fair game in the
+					-- top level TOC.  We only want to filter on level and depth.
+					lHTMLText = buildTOC( lLevel, lDepth, {} )
+					
 				
 				case "NAV" then
 					integer lIdx
