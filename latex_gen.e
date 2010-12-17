@@ -19,6 +19,8 @@ constant replacements = {
 	'$', "{\\textdollar}",
 	'_', "{\\textunderscore}",
 	'^', "{\\textasciicircum}",
+	'<', "{\\textless}",
+	'>', "{\\textgreater}",
 	$
 }
 
@@ -53,7 +55,7 @@ function generator(integer action, sequence params, object context)
 			doc_text = params[1]
 
 		case InternalLink then
-			doc_text = params[2] & " (\\ref{" & params[1] & "})"
+			doc_text = escape(params[2]) & " (\\ref{" & params[1] & "})"
 
 		case QualifiedLink then
 			doc_text = "\\hyperref[" & params[2] & "]{" & escape(params[3]) & "}"
@@ -263,17 +265,21 @@ function default_template(sequence title, sequence context, sequence body)
 \usepackage[all]{hypcap}
 \usepackage[Lenny]{fncychap}
 \usepackage{fancyhdr}
-\usepackage{vpage}
+\usepackage{vmargin}
 %\usepackage[titles]{tocloft}
 \usepackage{graphicx}
 \usepackage{fix-cm}
 
+\setpapersize{USletter}
+\setmarginsrb{0.75in}{0.5in}{0.75in}{0.5in}{10mm}{5mm}{20mm}{10mm}
+
 \pagestyle{empty}
 \fancyhf{}
-\fancyhead[LE]{\slshape \leftmark}
-\fancyhead[RO]{\slshape \rightmark}
-\fancyfoot[LE]{\thepage}
-\fancyfoot[RO]{\thepage}
+\fancyhead[RO,RE]{\slshape \rightmark}
+\fancyhead[LO,LE]{\slshape \leftmark}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\footrulewidth}{0.4pt}
 
 % Set the default font to serif
 \renewcommand{\familydefault}{\sfdefault}
