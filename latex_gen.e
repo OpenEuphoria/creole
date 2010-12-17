@@ -309,10 +309,9 @@ function default_template(sequence title, sequence context, sequence body)
 \author{OpenEuphoria Group}
 %\maketitle
 {\centering%
-  %\includegraphics{300px-Logo-Logotype-boxed-oV2-R0.png}
-  \includegraphics{300px-mongoose-head-colour-V2-R0.png}%
+  \includegraphics{images/300px-mongoose-head-colour-V2-R0.png}%
   \par\vspace*{48pt}%
-  \includegraphics{300px-Logo-Logotype-orange-V2-R0.png}%
+  \includegraphics{images/300px-Logo-Logotype-orange-V2-R0.png}%
   %\vspace*{64pt}%
   \par{\fontsize{28}{36}\selectfont Version 4.0}%
   \vspace*{90pt}%
