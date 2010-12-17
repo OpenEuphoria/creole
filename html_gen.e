@@ -41,8 +41,11 @@ function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpa
 			
 		end if
 		lHeadingContext[lHeadingDepth] += 1
-		
-		if showTOC( pHere, pLevel, pDepth, lHeadingContext ) then
+		sequence lHere = pHere
+		if not length( lHere ) then
+			lHere = lHeadingContext
+		end if
+		if showTOC( lHere, pLevel, pDepth, lHeadingContext ) then
 		
 			lHTMLText &= "<div class=\"toc_" & sprint(lHeadings[i][1]) & "\">"
 			if length(pSpacer) > 0 then
@@ -53,7 +56,6 @@ function buildTOC( integer pLevel, integer pDepth, sequence pHere, sequence pSpa
 			lHTMLText &= "<a href=\"" & make_filename(lHeadings[i][5], ext, "") &
 						"#" & lHeadings[i][3] & "\">" &
 						lHeadings[i][2] & "</a></div>\n"
-			
 		end if
 	end for
 	lHTMLText &= "</div>\n"
@@ -63,7 +65,13 @@ end function
 
 function showTOC( sequence pContext, integer pLevel, integer pDepth, sequence pHeadings )
 	-- check to see if we should be showing the TOC link for this heading
-	if length( pContext ) < pLevel then
+	if length( pHeadings ) < pLevel then
+		-- heading is shallower that we're going to show
+		return 0
+	end if
+	
+	if length( pHeadings ) > pDepth then
+		-- heading goes deeper than we're going to show
 		return 0
 	end if
 	
@@ -491,31 +499,33 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			
 			switch lParms[1][2] do
 				case "TOC" then
-					sequence lStartDepth = { 0, 0 }
-					lValue = {0,2}
+					integer lLevel = 1, lDepth = 2
 
 					for i = 2 to length(lParms) do
 						if equal(lParms[i][1], "heading") then
 							if find(lParms[i][2], {"yes", "on", "show", "1"}) then
 								lHTMLText &= "<p class=\"TOCHead\">Table of Contents</p>"
 							end if
-						elsif equal(lParms[i][1], "level") then
+						elsif equal(lParms[i][1], "depth") then
 							lValue = value(lParms[i][2])
-							if lValue[1] != GET_SUCCESS then
-								lValue[2] = 2
+							if lValue[1] = GET_SUCCESS then
+								lDepth = lValue[2]
 							end if
 						elsif equal(lParms[i][1], "spacer") then
 							search:match_replace("^", lParms[i][2], " ")
 						
-						elsif equal(lParms[i][1], "start") then
-							lStartDepth = value(lParms[i][2])
-							if lStartDepth[1] != GET_SUCCESS then
-								lStartDepth[2] = 0
+						elsif equal(lParms[i][1], "level") then
+							lValue = value(lParms[i][2])
+							if lValue[1] = GET_SUCCESS then
+								lLevel = lValue[2]
 							end if
 						end if
 					end for
 					
-					lHTMLText = buildTOC( 0, 1, {} )
+					-- Use a Context of {}, so any section is fair game in the
+					-- top level TOC.  We only want to filter on level and depth.
+					lHTMLText = buildTOC( lLevel, lDepth, {} )
+					
 				
 				case "NAV" then
 					integer lIdx
