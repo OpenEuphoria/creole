@@ -2,6 +2,7 @@ include std/console.e
 include std/text.e
 include std/search.e
 include std/sequence.e
+include std/search.e
 
 include common_gen.e
 
@@ -54,6 +55,9 @@ function generator(integer action, sequence params, object context)
 		case SanitizeURL then
 			doc_text = params[1]
 
+		case Bookmark then
+			doc_text = sprintf("\\label{%s}\n", { params })
+
 		case InternalLink then
 			doc_text = escape(params[2]) & " (\\ref{" & params[1] & "})"
 
@@ -86,9 +90,6 @@ function generator(integer action, sequence params, object context)
 				end if
 			end if
 			
-		case Bookmark then
-			doc_text = sprintf("\\label{%s}\n", { params })
-
 		case OrderedList then
 			doc_text = "\\begin{enumerate}\n" & params & "\\end{enumerate}\n"
 
@@ -255,7 +256,7 @@ end function
 
 function default_template(sequence title, sequence context, sequence body)
 	return `
-\documentclass[letter,openany,twoside]{book}
+\documentclass[openany]{book}
 \usepackage{fixltx2e}
 \usepackage{tabularx}
 \usepackage{listings}
@@ -288,6 +289,7 @@ function default_template(sequence title, sequence context, sequence body)
 \definecolor{stringgray}{rgb}{0.2,0.2,1.0}
 \definecolor{keyword}{rgb}{0.05,0.35,0.05}
 \lstset{%
+	xleftmargin=10pt,xrightmargin=10pt,%
 	showspaces=false,%
 	showtabs=false,%
 	showstringspaces=false,%
@@ -307,18 +309,7 @@ function default_template(sequence title, sequence context, sequence body)
 \frontmatter
 \title{` & title & `}
 \author{OpenEuphoria Group}
-%\maketitle
-{\centering%
-  \includegraphics{images/300px-mongoose-head-colour-V2-R0.png}%
-  \par\vspace*{48pt}%
-  \includegraphics{images/300px-Logo-Logotype-orange-V2-R0.png}%
-  %\vspace*{64pt}%
-  \par{\fontsize{28}{36}\selectfont Version 4.0}%
-  \vspace*{90pt}%
-  \par{\fontsize{48}{58}\selectfont User Manual}%
-  %
-  \newpage%
-}
+\maketitle
 
 \setcounter{tocdepth}{1}
 \tableofcontents

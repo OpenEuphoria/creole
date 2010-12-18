@@ -16,7 +16,7 @@ ifeq "$(PREFIX)" ""
 PREFIX=/usr/local
 endif
 
-all : build/creolehtml
+all : build/creole
 
 build/main-.c build/creole.mak : creole.ex $(CREOLE)
 	-mkdir build

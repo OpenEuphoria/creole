@@ -3,8 +3,6 @@
 
 !include config.wat
 
-CREOLEHTML= creole.e filreadr.e html_gen.e kanarie.e seqreadr.e txtreadr.e
-
 !ifndef PREFIX
 PREFIX=$(%EUDIR)
 !endif

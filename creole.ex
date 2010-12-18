@@ -1,5 +1,5 @@
 #!/usr/bin/env eui
-
+include std/console.e
 -- Standard library
 include std/cmdline.e
 include std/datetime.e
@@ -17,7 +17,6 @@ include std/utils.e
 include creole.e
 include common.e
 include common_gen.e
-include kanarie.e as kan
 
 -- Our generators
 include html_gen.e
@@ -191,34 +190,32 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 					end if
 					
 				end for
-			
-				lData = kan:createData()
-				kan:setValue(lData, "title", lHeadings)
-				kan:setValue(lData, "context", lThisContext)
-				kan:setValue(lData, "thistext", lThisText)
-				kan:setValue(lData, "body", pParms[1])
-				kan:setValue(lData, "previous", make_filename(lPrevPageFile[1], common_gen:extension(), ""))
-				kan:setValue(lData, "next", make_filename(lNextPageFile[1], common_gen:extension(), ""))
-				kan:setValue(lData, "prevchap", make_filename(lPrevChapFile[1], common_gen:extension(), ""))
-				kan:setValue(lData, "nextchap", make_filename(lNextChapFile[1], common_gen:extension(), ""))
-				kan:setValue(lData, "currchap", make_filename(lCurrChapFile[1], common_gen:extension(), ""))
-				kan:setValue(lData, "parent", make_filename(lParentFile[1], common_gen:extension(), ""))
-				kan:setValue(lData, "pptext", lPrevPageFile[2])
-				kan:setValue(lData, "nptext", lNextPageFile[2])
-				kan:setValue(lData, "pctext", lPrevChapFile[2])
-				kan:setValue(lData, "nctext", lNextChapFile[2])
-				kan:setValue(lData, "chaptext", lCurrChapFile[2])
-				kan:setValue(lData, "partext", lParentFile[2])
-				kan:setValue(lData, "home", make_filename(lHomeFile, common_gen:extension(), ""))
-				kan:setValue(lData, "toc", make_filename(lTOCFile, common_gen:extension(), ""))
-				kan:setValue(lData, "publishedon", vPublishedDate)
-				kan:setValue(lData, "quicklink", join( vQuickLink, "\n" ) )
-				
-				lDocText = kan:generate(lData, vTemplateFile)
+
+				lDocText = match_replace("@@title@@", vTemplateFile, lHeadings)
+				lDocText = match_replace("@@context@@", lDocText, lThisContext)
+				lDocText = match_replace("@@thistext@@", lDocText, lThisText)
+				lDocText = match_replace("@@previous@@", lDocText, make_filename(lPrevPageFile[1], common_gen:extension(), ""))
+				lDocText = match_replace("@@next@@", lDocText, make_filename(lNextPageFile[1], common_gen:extension(), ""))
+				lDocText = match_replace("@@prevchap@@", lDocText, make_filename(lPrevChapFile[1], common_gen:extension(), ""))
+				lDocText = match_replace("@@nextchap@@", lDocText, make_filename(lNextChapFile[1], common_gen:extension(), ""))
+				lDocText = match_replace("@@currchap@@", lDocText, make_filename(lCurrChapFile[1], common_gen:extension(), ""))
+				lDocText = match_replace("@@parent@@", lDocText, make_filename(lParentFile[1], common_gen:extension(), ""))
+				lDocText = match_replace("@@pptext@@", lDocText, lPrevPageFile[2])
+				lDocText = match_replace("@@nptext@@", lDocText, lNextPageFile[2])
+				lDocText = match_replace("@@pctext@@", lDocText, lPrevChapFile[2])
+				lDocText = match_replace("@@nctext@@", lDocText, lNextChapFile[2])
+				lDocText = match_replace("@@chaptext@@", lDocText, lCurrChapFile[2])
+				lDocText = match_replace("@@partext@@", lDocText, lParentFile[2])
+				lDocText = match_replace("@@home@@", lDocText, make_filename(lHomeFile, common_gen:extension(), ""))
+				lDocText = match_replace("@@toc@@", lDocText, make_filename(lTOCFile, common_gen:extension(), ""))
+				lDocText = match_replace("@@publishedon@@", lDocText, vPublishedDate)
+				lDocText = match_replace("@@quicklink@@", lDocText, join( vQuickLink, "\n" ))
+
+				-- Body will be the largest addition, for efficiency, do it last
+				lDocText = match_replace("@@body@@", lDocText, pParms[1])
 			else
 				lDocText = common_gen:default_template(lHeadings, lThisContext, pParms[1])
 			end if
-
 		case else
 			lDocText = common_gen:generate(pAction, pParms, pContext)
 	end switch
@@ -383,7 +380,6 @@ procedure main()
 	-- Handle template directory
 	if length(map:get(opts, "d", "")) then
 		lDidSetTemplateDir = 1
-		setTemplateDirectory(map:get(opts, "d"))
 	end if
 	
 	-- Handle template file
@@ -413,25 +409,15 @@ procedure main()
 	end for
 		
 	if sequence(vTemplateFilename) then
-		sequence templateDir, templateFilename = vTemplateFilename
-		
-		if not lDidSetTemplateDir then
-			sequence canonicalFilename
-			
-			canonicalFilename = canonical_path(vTemplateFilename)
-			templateDir       = pathname(canonicalFilename)
-			templateFilename  = filename(canonicalFilename)
-			
-			kan:setTemplateDirectory(templateDir & SLASH)
-			lDidSetTemplateDir = 1
+		if not file_exists(vTemplateFilename) then
+			printf(2,"\n*** Template file does not exist '%s'\n", { vTemplateFilename })
+			abort(1)
 		end if
-		
-		vTemplateFile = kan:loadTemplateFromFile(templateFilename)
-		
+
+		vTemplateFile = read_file(vTemplateFilename)
 		if atom(vTemplateFile) then
-			printf(2,"\n*** Failed to load template from '%s'\n", { 
-				kan:getTemplateDirectory() & vTemplateFilename })
-			
+			printf(2, "\n*** Could not load template file '%s'\n", {
+				vTemplateFilename })
 			abort(1)
 		end if
 	end if		

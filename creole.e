@@ -1629,8 +1629,8 @@ function get_heading(sequence pRawText, atom pFrom)
 	lBookMark = sprintf("_%d_%s", {length(vBookMarks), cleanup(lText)})
 	
 	lText = Generate_Final(Comment, vRawContext) &
-	        Generate_Final(Bookmark, lBookMark) &
-	        Generate_Final(Heading, {lLevel, lNums & lText})
+	        Generate_Final(Heading, {lLevel, lNums & lText}) &
+	        Generate_Final(Bookmark, lBookMark) 
 	if vExplicitOutput = 0 and vSplitLevel > 0 and lLevel <= vSplitLevel then
 		lText = TAG_ENDFILE & lText
 		vOutputFile = append(vOutputFile, sprintf("%s_%04d", {vSplitName, length(vOutputFile)+1}))
