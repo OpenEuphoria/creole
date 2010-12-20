@@ -38,7 +38,7 @@ function escape(sequence val)
 			integer tmp = find(val[i], replacements)
 			if tmp then
 				val = replace(val, replacements[tmp+1], i)
-				i += length(tmp + 1)
+				i += length(replacements[tmp+1]) - 1
 			end if
 		end if
 		
@@ -82,11 +82,11 @@ function generator(integer action, sequence params, object context)
 			-- a {-1} for the Paragraph action to see what the beginning and ending
 			-- of the paragraph is going to be. Thus we have this special case.
 			if equal(params, {-1}) then
-				doc_text = "\\par " & params & "\n\n"
+				doc_text = "\\par " & params & "\n"
 			else
 				params = trim(params)
 				if length(params) then
-					doc_text = sprintf("\\par %s\n\n", { params })
+					doc_text = sprintf("\\par %s\n", { params })
 				end if
 			end if
 			
@@ -135,10 +135,10 @@ function generator(integer action, sequence params, object context)
 				numbers = "left"
 			end if
 
-			doc_text = sprintf("\\lstset{language=Euphoria,numbers=%s,caption=}" &
+			doc_text = sprintf("\\lstset{language=Euphoria,numbers=%s}" &
 				"\\begin{lstlisting}\n" &
 				"%s\n" &
-				"\\end{lstlisting}\n", 
+				"\\end{lstlisting}\n",
 			{
 				numbers,
 				params[1]
@@ -151,7 +151,7 @@ function generator(integer action, sequence params, object context)
 				def = repeat_pattern("X|", length(table_rows[1]))
 			end if
 				
-			doc_text = sprintf("\\begin{tabularx}{\\linewidth}{|%s}\n\\hline\n%s\n\\end{tabularx}\n", { 
+			doc_text = sprintf("\n\\begin{tabularx}{\\linewidth}{|%s}\n\\hline\n%s\n\\end{tabularx}\n\n", {
 				def, params[1] })
 			
 			table_rows = {}
@@ -183,13 +183,13 @@ function generator(integer action, sequence params, object context)
 			doc_text = " \\\\ \n"
 
 		case HorizontalLine then
-			doc_text = "\n\\hspace{5pt}\n\\hrule\n\\hspace{5pt}\n\n"
+			doc_text = "\n\\hspace{5pt}\n\\hrule\n\\hspace{5pt}\n"
 
 		case NoWikiBlock then
-			doc_text = sprintf("\\lstset{language=,numbers=none,caption=}" &
+			doc_text = sprintf("\n\\lstset{language=,numbers=none,caption=}" &
 				"\\begin{lstlisting}\n" &
 				"%s\n" &
-				"\\end{lstlisting}\n", 
+				"\\end{lstlisting}\n",
 			{
 				params[1]
 			})
@@ -204,7 +204,7 @@ function generator(integer action, sequence params, object context)
 			doc_text = ""
 
 		case DefinitionList then
-			doc_text = "\\begin{description}"
+			doc_text = "\n\\begin{description}"
 			for i = 1 to length(params) do
 				doc_text &= "\\item[" & params[i][1] & "] \\hfill \\\\\n" &
 					params[i][2] & "\n"
