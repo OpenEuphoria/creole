@@ -340,10 +340,10 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 			lHTMLText = "\n<div class=\"" & pParms[1] & "\">" & pParms[2] & "</div>\n"
 
 		case Bookmark then
-			lHTMLText = sprintf(`<a name="%s"></a>`, { pParms })
+			lHTMLText = "\n<a name=\"" & pParms & "\"></a>"
 			lPos = find('_', pParms, 2) -- skip first _
 			if lPos > 0 then
-				lHTMLText = sprintf(`%s<a name="%s"></a>`, { lHTMLText, pParms[lPos+1..$] })
+				lHTMLText = sprintf("%s<a name=\"%s\"></a>", { lHTMLText, pParms[lPos+1..$] })
 			end if
 
 		case OrderedList then
@@ -357,7 +357,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 
 		case Heading then
 			lNumText = sprintf("%d", pParms[1])
-			lHTMLText = "\n<h" & lNumText & ">" & trim(pParms[2]) & "</h" & lNumText & ">"
+			lHTMLText = "<h" & lNumText & ">" & trim(pParms[2]) & "</h" & lNumText & ">"
 
 		case ItalicText then
 			lHTMLText = "<em>" & pParms[1] & "</em>"
@@ -638,7 +638,7 @@ function html_generator(integer pAction, sequence pParms, object pContext = "")
 					lHTMLText = buildIndex( lParms )
 				
 				case "QUICKLINK" then
-					lHTMLText = sprintf("<a name=\"ql%d\"/>\n", { length(vQuickLink)} )
+					lHTMLText = sprintf("\n<a name=\"ql%d\"/>\n", { length(vQuickLink)} )
 					lHere = creole_parse(Get_CurrentHeading, , lInstance )
 					vQuickLink = append( vQuickLink, 
 						sprintf( "<li><a href='%s.html#ql%d'>%s</a></li>", { lHere[7], length(vQuickLink), lHere[H_TEXT]}) )
