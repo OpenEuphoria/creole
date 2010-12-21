@@ -4071,7 +4071,7 @@ global function creole_parse(object pRawText, object pFinalForm_Generator = -1, 
 
 				case CO_AllowMacros then
 
-						if eu:find(pContext, {"yes", "YES", "on", "ON", "1", "Y", "y", "true", "TRUE"}) then
+						if eu:find(pContext, {1, "yes", "YES", "on", "ON", "1", "Y", "y", "true", "TRUE"}) then
 							vAllowMacros = 1
 						else
 							vAllowMacros = 0

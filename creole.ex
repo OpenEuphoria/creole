@@ -369,7 +369,7 @@ procedure main()
 	vQuiet   = map:get(opts, "q", 0)
 	use_span_for_color = map:get(opts, "htmldoc", 0)		
 	vTemplateFilename = map:get(opts, "t", 0)
-	creole_parse(Set_Option, CO_AllowMacros, iif(map:get(opts, "A", 0), "NO", "YES"))
+	creole_parse(Set_Option, CO_AllowMacros, map:get(opts, "A", 0))
 
 	-- Handle output directory
 	vOutDir = map:get(opts, "o", "")
