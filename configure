@@ -1,5 +1,5 @@
 CONFIG_FILE=config.gnu
-
+echo "# configuration for creole" > config.gnu
 # parameters
 while [ "$1" != "" ]; do
     case $1 in
