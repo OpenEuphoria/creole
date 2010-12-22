@@ -18,9 +18,11 @@ endif
 
 all : build/creole
 
-build/main-.c build/creole.mak : creole.ex $(CREOLE)
+build/main-.c: creole.ex $(CREOLE)
 	-mkdir build
 	cd build && euc -makefile ../creole.ex
+
+build/creole.mak : build/main-.c
 
 build/creole : build/main-.c build/creole.mak
 	 $(MAKE) -C build -f creole.mak
