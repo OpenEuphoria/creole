@@ -33,6 +33,21 @@ sequence KnownWikis  = {
 	$
 }
 
+enum -- fields from Get_Elements
+	GE_Type, -- ('h', 'p')
+	-- For type ='h'
+	GE_Depth = 2,
+	GE_Text,
+	GE_Bookmark,
+	GE_Subcontext,
+	GE_Output,
+	-- For type ='p'
+	GE_PluginName = 2,
+	GE_Params,
+	GE_PlugSubcontext = 5,
+	GE_PlugOutput,
+	$
+	
 sequence vStatus = {}
 
 function generate_doc(integer pAction, sequence pParms, object pContext)
@@ -87,8 +102,11 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			
 		case Document then
 			lHeadings = creole_parse(Get_Macro, "title")
+			lElements = creole_parse(Get_Elements)
 			
-			-- First we find out what level this page is on.				
+			-- First we find out what level this page is on.
+			-- We do this by scanning all the elements to locate
+			-- the first heading that occurs in the file being created.
 			lThisFile = pParms[2]
 			lThisText = ""
 			lThisElement = 0
@@ -96,18 +114,19 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			if vVerbose then
 				printf(1, "Generated: %s\n", {lThisFile})
 			end if
-			lElements = creole_parse(Get_Elements)
 			for i = 1 to length(lElements) do
-				if lElements[i][1] = 'h' then
-					if equal(lElements[i][6], lThisFile) then
-						lThisLevel = lElements[i][2]
-						lThisContext = lElements[i][5]
-						lThisText = lElements[i][3]
+				if lElements[i][GE_Type] = 'h' then
+					if equal(lElements[i][GE_Output], lThisFile) then
+						-- Found the first heading for the current output file.
+						lThisLevel = lElements[i][GE_Depth]
+						lThisContext = lElements[i][GE_Subcontext]
+						lThisText = lElements[i][GE_Text]
 						lThisElement = i
 						exit
 					end if
 				end if
 			end for
+			
 			
 			if sequence(vTemplateFile) then
 				lNextPageFile = {{},{}}
@@ -123,35 +142,45 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 				-- Find TOC and Home
 				for i = 1 to length(lElements) do
 					if length(lTOCFile) = 0 then
-						if lElements[i][1] = 'p' and begins("TOC" & -1, lElements[i][2]) then
-							lTOCFile = lElements[i][4]
+						-- Is this the TOC plugin? If so, grab the file name.
+						if lElements[i][GE_Type] = 'p' and begins("TOC" & -1, lElements[i][GE_PluginName]) then
+							lTOCFile = lElements[i][GE_Params]
 						end if
 					end if
+					
 					if length(lHomeFile) = 0 then
-						if lElements[i][1] = 'h' then
-							lHomeFile = lElements[i][6]
+						-- The 'home' file is the output file for the first heading.
+						if lElements[i][GE_Type] = 'h' then
+							lHomeFile = lElements[i][GE_Output]
 						end if
 					end if
 					if length(lHomeFile) > 0 and length(lTOCFile) > 0 then
+						-- stop scanning when we have both.
 						exit
 					end if
 				end for
 				
 				-- Now we look for the next page and next chapter files.
+				-- The next page is defined as the first heading after the current one
+				-- that has a different file to the current file.
+				--
+				-- The next chapter is defined as the first heading after the current one
+				-- that is at level 1.
 				for i = lThisElement + 1 to length(lElements) do
-					if lElements[i][1] != 'h' then
+					if lElements[i][GE_Type] != 'h' then
 						continue
 					end if
 
 					if length(lNextPageFile[1]) = 0 then
-						if not equal(lElements[i][6], lThisFile) then
-							lNextPageFile = {lElements[i][6], lElements[i][3]}
+						if not equal(lElements[i][GE_Output], lThisFile)  and
+						   lElements[i][GE_Depth] = lThisLevel then
+							lNextPageFile = {lElements[i][GE_Output], lElements[i][GE_Text]}
 						end if
 					end if
 					
 					if length(lNextChapFile[1]) = 0 then
-						if lElements[i][2] = 1 then
-							lNextChapFile = {lElements[i][6], lElements[i][3]}
+						if lElements[i][GE_Depth] = 1 then
+							lNextChapFile = {lElements[i][GE_Output], lElements[i][GE_Text]}
 							exit
 						end if
 					end if
@@ -162,29 +191,31 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 					lCurrChapFile = {lThisFile, lThisText}
 				end if
 				for i = lThisElement - 1 to 1 by -1 do
-					if lElements[i][1] != 'h' then
+					if lElements[i][GE_Type] != 'h' then
 						continue
 					end if
 
 					if length(lPrevPageFile[1]) = 0 then
-						if not equal(lElements[i][6], lThisFile) then
-							lPrevPageFile = {lElements[i][6], lElements[i][3]}
+						if not equal(lElements[i][GE_Output], lThisFile) and
+						   lElements[i][GE_Depth] = lThisLevel
+						then
+							lPrevPageFile = {lElements[i][GE_Output], lElements[i][GE_Text]}
 						end if
 					end if
 					
 					if length(lParentFile[1]) = 0 then
-						if lElements[i][2] = lThisLevel - 1 then
-							lParentFile = {lElements[i][6], lElements[i][3]}
+						if lElements[i][GE_Depth] = lThisLevel - 1 then
+							lParentFile = {lElements[i][GE_Output], lElements[i][GE_Text]}
 						end if
 					end if
 					
 					if length(lCurrChapFile[1]) = 0 then
-						if lElements[i][2] = 1 then
-							lCurrChapFile = {lElements[i][6], lElements[i][3]}
+						if lElements[i][GE_Depth] = 1 then
+							lCurrChapFile = {lElements[i][GE_Output], lElements[i][GE_Text]}
 						end if
 					elsif length(lPrevChapFile[1]) = 0 and length(lCurrChapFile) != 0 then
-						if lElements[i][2] = 1 then
-							lPrevChapFile = {lElements[i][6], lElements[i][3]}
+						if lElements[i][GE_Depth] = 1 then
+							lPrevChapFile = {lElements[i][GE_Output], lElements[i][GE_Text]}
 							exit
 						end if
 					end if
@@ -216,6 +247,7 @@ function generate_doc(integer pAction, sequence pParms, object pContext)
 			else
 				lDocText = common_gen:default_template(lHeadings, lThisContext, pParms[1])
 			end if
+			
 		case else
 			lDocText = common_gen:generate(pAction, pParms, pContext)
 	end switch
