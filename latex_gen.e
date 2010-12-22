@@ -1,8 +1,9 @@
 include std/console.e
-include std/text.e
+include std/search.e
 include std/search.e
 include std/sequence.e
-include std/search.e
+include std/text.e
+include std/types.e
 
 include common_gen.e
 
@@ -26,6 +27,27 @@ constant replacements = {
 }
 
 sequence table_cells = {}, table_rows = {}
+
+-- Path names are typically long and cannot be separated by LaTeX by
+-- default. There is the \path{} command which will do intelligent
+-- splitting of the path when the path runs off the side of the page
+-- but we must know to do this. So, this function just takes a wild
+-- guess as to if a given sequence is possibly a path.
+
+function is_probably_path(sequence s)
+	if length(s) = 0 then
+		return 0
+	end if
+
+	for i = 1 to length(s) do
+		integer ch = s[i]
+		if find(ch, "/\\:.") = 0 and not t_alnum(ch) then
+			return 0
+		end if
+	end for
+
+	return 1
+end function
 
 function escape(sequence val)
 	integer i = 1
@@ -109,7 +131,11 @@ function generator(integer action, sequence params, object context)
 			doc_text = sprintf("\\textbf{%s}", { params[1] })
 
 		case MonoText then
-			doc_text = "\\texttt{" & params[1] & "}"
+			if is_probably_path(params[1]) then
+				doc_text = "\\texttt{\\path{" & params[1] & "}}"
+			else
+				doc_text = "\\texttt{" & params[1] & "}"
+			end if
 
 		case UnderlineText then
 			doc_text = sprintf("\\uline{%s}", { params[1] })
