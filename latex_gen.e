@@ -50,7 +50,7 @@ end function
 
 function generator(integer action, sequence params, object context)
 	sequence doc_text = ""
-	
+
 	switch action do
 		case SanitizeURL then
 			doc_text = params[1]
@@ -150,30 +150,30 @@ function generator(integer action, sequence params, object context)
 			if length(table_rows) then
 				def = repeat_pattern("X|", length(table_rows[1]))
 			end if
-				
-			doc_text = sprintf("\n\\begin{tabularx}{\\linewidth}{|%s}\n\\hline\n%s\n\\end{tabularx}\n\n", {
-				def, params[1] })
+
+			doc_text = "\n\\begin{tabularx}{\\linewidth}{|" & def &
+				"}\n\\hline\n" & params[1] & "\n\\end{tabularx}\n\n"
 			
 			table_rows = {}
 
 		case HeaderRow then
-			doc_text = sprintf("%s \\\\\\hline\n", { params[1][1..$ - 2] })
+			doc_text = trim(params[1][1..$ - 2]) & " \\\\\\hline\n"
 			
 			table_rows = append(table_rows, table_cells)
 			table_cells = {}
 
 		case HeaderCell then
-			doc_text = sprintf("\\textbf{%s} & ", { trim(params[1]) })
+			doc_text = "\\textbf{" & trim(params[1]) & "} & "
 			table_cells = append(table_cells, params[1])
 
 		case NormalRow then
-			doc_text = sprintf("%s \\\\ \\hline\n", { params[1][1..$ - 2] })
+			doc_text = trim(params[1][1..$ - 2]) & " \\\\ \\hline\n"
 			
 			table_rows = append(table_rows, table_cells)
 			table_cells = {}
 
 		case NormalCell then
-			doc_text = sprintf("%s & ", { trim(params[1]) })
+			doc_text = trim(params[1]) & " & "
 			table_cells = append(table_cells, params[1])
 
 		case NonBreakSpace then
