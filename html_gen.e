@@ -160,20 +160,15 @@ function buildIndex( sequence pParms )
 				integer ix = find( '(', lEntry[7] )
 				integer sl
 				if ix then
-					if lSplitLength = -1 then
-						lSplitLength = find('_', href)
-						lSplitName = href[1..lSplitLength]
-					end if
-					if lSplitLength + 11 > length(href) then
-						sl = length(href)
-					else
-						sl = lSplitLength + 11
-					end if
+					
+					lSplitLength = match( ".html", href ) - 1
+					sl = lSplitLength + 7
+					
 					map:put( 
 							lSearchMap, 
 							pretty_sprint( lEntry[7][1..ix-2], JSON_OPTS ), 
 							{ 
-								href[lSplitLength+1..lSplitLength+4], 
+								href[1..lSplitLength], 
 								href[sl .. $], 
 								pretty_sprint( lEntry[7][ix+1..$-1], JSON_OPTS)
 							}, 
@@ -237,7 +232,7 @@ function search(frm) {
 		for( var ix = 0; ix <  m.length; ++ix ){
 			var r = m[ix];
 			list += '<li>';
-			list += "<a href=" + base + r[0] + ".html#" + r[1] + ">";
+			list += "<a href=" + r[0] + ".html#" + r[1] + ">";
 			list += r[2] + ": " + frm.value;
 			list += '</a></li>';
 		}
