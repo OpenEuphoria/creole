@@ -115,7 +115,9 @@ enum    -- Temporary embedded tags
 	TAG_PLUGIN,
 	TAG_STARTPARA,
 	TAG_ENDPARA,
-	TAG_UNRESOLVED
+	TAG_UNRESOLVED,
+	TAG_TABLE_BAR,
+	$
 
 constant kLeadIn = "=*/<{#[\n\\-|~!_:^,+`;>%@&"
 constant kDecorTag = "*/#_^,-+"
@@ -893,8 +895,8 @@ test_equal("get_to_eol 6", {13, "  ab cd ef\t\t"}, get_to_eol("  ab cd ef\t\t\ng
 end ifdef
 
 -- This returns a Logical line. This can span multiple physical lines.
--- A logical line ends when if finds a hysical line that begins with one
--- of the FronDelim entries or a physical line that ends with one of the
+-- A logical line ends when it finds a physical line that begins with one
+-- of the FrontDelim entries or a physical line that ends with one of the
 -- BackDelim entries, or a blank line.
 -- This also returns an index to the next character after the logical line.
 
@@ -2878,11 +2880,11 @@ function get_table(sequence pRawText, atom pFrom)
 	integer lMode
 	integer lHeadingLine
 	integer lCI
+	integer lCJ
 	sequence lRowText
 	sequence lNewLine
 	integer lTableLinecnt
 
-	
 	-- Collect all the table definition before outputing anything.
 	lHeaders = {}
 	lCells = {}
@@ -2892,6 +2894,16 @@ function get_table(sequence pRawText, atom pFrom)
 	lTableLinecnt = 0
 
 	while length(lLine) > 0 with entry do
+		-- Convert all escaped bars with special tag.
+		lCI = 1
+		lCJ = match("~|", lLine, lCI)
+		while lCJ != 0 do
+			lLine = replace(lLine, TAG_TABLE_BAR, lCJ, lCJ + 1)
+			lCI = lCJ + 1
+			lCJ = match("~|", lLine, lCI)
+		end while
+		
+		
 		lText = ""
 		lCellType = '?'
 		lHeadingLine = 0
@@ -2985,6 +2997,16 @@ function get_table(sequence pRawText, atom pFrom)
 		end if
 	end while
 
+	-- Convert any escaped bars back to real bars.
+	for i = 1 to length(lHeaders) do
+		lHeaders[i] = find_replace(TAG_TABLE_BAR, lHeaders[i], '|')
+	end for
+	for i = 1 to length(lCells) do
+		for j = 1 to length(lCells[i]) do
+			lCells[i][j] = find_replace(TAG_TABLE_BAR, lCells[i][j], '|')
+		end for
+	end for
+	
 	-- Generate final for the table now.
 	lText = ""
 	if length(lHeaders) > 0 then
