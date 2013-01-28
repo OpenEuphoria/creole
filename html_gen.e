@@ -208,7 +208,7 @@ function buildIndex( sequence pParms )
 			wx += 1
 		end while
 		lSearchData &= "};\n"
-		
+		save_map(lSearchMap, sprintf("%s%ssearch.dat", {vOutDir, SLASH})) 
 		create_directory( sprintf("%s%sjs", { vOutDir, SLASH }) )
 		atom js = open( sprintf("%s%sjs%ssearch.js", { vOutDir, SLASH, SLASH } ), "w", 1 )
 		puts( js, lSearchData ) 
